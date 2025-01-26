@@ -63,6 +63,9 @@ click (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
     {
       click[i].callback = NULL;
       click[i].callback_delay = 0u;
+      click[i].toggled_r = 125u;
+      click[i].toggled_g = 255u;
+      click[i].toggled_b = 0u;
       click[i].b_state = false;
     }
 }
@@ -204,6 +207,30 @@ system_box_draw (ecs_iter_t *it)
 }
 
 static void
+system_click_toggle (ecs_iter_t *it)
+{
+  click_c *click = ecs_field (it, click_c, 0);
+
+  hover_c *hover = ecs_field (it, hover_c, 1);
+
+  const app_s *app = ecs_singleton_get(it->world, app_s);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      click[i].b_state = false;
+      if (hover[i].b_state == false)
+        {
+          continue;
+        }
+      if(app->input_man->mouse.b_is_lmb_down == false)
+        {
+          continue;
+        }
+      click[i].b_state = true;
+    }
+}
+
+static void
 system_color_set (ecs_iter_t *it)
 {
   color_c *color = ecs_field (it, color_c, 0);
@@ -213,11 +240,27 @@ system_color_set (ecs_iter_t *it)
     {
       hover = ecs_field (it, hover_c, hover_id);
     }
+  Sint8 click_id = 2;
+  click_c *click = NULL;
+  if (ecs_field_is_set (it, click_id) == true)
+    {
+      click = ecs_field (it, click_c, click_id);
+    }
   for (Sint32 i = 0; i < it->count; i++)
     {
+      if (click != NULL && &click[i] != NULL)
+        {
+          if (click[i].b_state == true)
+            {
+              color[i].r = click[i].toggled_r;
+              color[i].g = click[i].toggled_g;
+              color[i].b = click[i].toggled_b;
+              continue;
+            }
+        }
       if (hover != NULL && &hover[i] != NULL)
         {
-          if(hover[i].b_state == true)
+          if (hover[i].b_state == true)
             {
               color[i].r = hover[i].toggled_r;
               color[i].g = hover[i].toggled_g;
@@ -410,12 +453,24 @@ init_pluto_systems (ecs_world_t *ecs)
   }
   {
     ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_click_toggle",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (click_c) },
+                                          { .id = ecs_id (hover_c) } } };
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = system_click_toggle });
+  }
+  {
+    ecs_entity_t ent
         = ecs_entity (ecs, { .name = "system_color_set",
                              .add = ecs_ids (ecs_dependson (
                                  ecs_lookup (ecs, "pre_render_phase"))) });
     ecs_query_desc_t query
         = { .terms = { { .id = ecs_id (color_c) },
-                       { .id = ecs_id (hover_c), .oper = EcsOptional } } };
+                       { .id = ecs_id (hover_c), .oper = EcsOptional },
+                       { .id = ecs_id (click_c), .oper = EcsOptional } } };
     ecs_system (
         ecs, { .entity = ent, .query = query, .callback = system_color_set });
   }

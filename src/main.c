@@ -96,11 +96,15 @@ main (int argc, char *argv[])
     box->b_uses_color = true;
     box->b_is_shown = true;
     box->b_is_filled = true;
+    click_c *click = ecs_ensure (ecs, ent, click_c);
+    click->toggled_r = 255u;
+    click->toggled_g = 255u;
+    click->toggled_b = 0u;
     color_c *color = ecs_ensure (ecs, ent, color_c);
     color->default_r = 255u;
     color->default_g = 0u;
     color->default_b = 0u;
-    hover_c *hover = ecs_ensure (ecs, ent, hover_c);
+    ecs_add (ecs, ent, hover_c);
     origin_c *origin = ecs_ensure (ecs, ent, origin_c);
     origin->relative = (SDL_FPoint){ 60.f, 60.f };
     origin->b_can_be_scaled = true;
@@ -132,6 +136,15 @@ main (int argc, char *argv[])
             {
               input_man_try_handle_mouse_motion (app->input_man, e.motion,
                                                  ecs);
+            }
+          if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+            {
+              input_man_try_handle_mouse_down (app->input_man, e.button, ecs);
+            }
+
+          if (e.type == SDL_EVENT_MOUSE_BUTTON_UP)
+            {
+              input_man_try_handle_mouse_up (app->input_man, e.button, ecs);
             }
         }
       input_man_bounce_keys (app->input_man, ecs);

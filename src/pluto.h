@@ -46,6 +46,9 @@ typedef struct component_click
 {
   void (*callback) (void *);
   Uint16 callback_delay;
+  Uint8 toggled_r;
+  Uint8 toggled_g;
+  Uint8 toggled_b;
   bool b_state;
 } click_c;
 
