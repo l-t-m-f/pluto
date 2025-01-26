@@ -144,6 +144,16 @@ typedef struct component_origin
   bool b_is_screen_based;
 } origin_c;
 
+typedef struct component_resize
+{
+  bool b_state;
+  bool from[MARGIN_HANDLE_TYPE_MAX];
+  Uint8 toggled_r;
+  Uint8 toggled_g;
+  Uint8 toggled_b;
+  Uint8 toggled_a;
+} resize_c;
+
 typedef struct component_sprite
 {
   string_t name;

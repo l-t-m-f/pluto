@@ -25,11 +25,13 @@ void
 handle_mouse_press (struct input_man *input_man, SDL_FPoint pos, Uint8 button,
                     void *param)
 {
+  ecs_run (param, ecs_lookup (param, "system_margins_check_handles"), 0.f, NULL);
 }
 void
 handle_mouse_release (struct input_man *input_man, SDL_FPoint pos,
                       Uint8 button, void *param)
 {
+  ecs_run (param, ecs_lookup (param, "system_margins_check_handles"), 0.f, NULL);
 }
 void
 handle_mouse_hold (struct input_man *input_man, SDL_FPoint pos, Uint8 button,
@@ -41,6 +43,7 @@ handle_mouse_motion (struct input_man *input_man, SDL_FPoint pos,
                      SDL_FPoint rel, void *param)
 {
   ecs_run (param, ecs_lookup (param, "system_drag_apply_delta"), 0.f, NULL);
+  ecs_run (param, ecs_lookup (param, "system_resize_apply_delta"), 0.f, NULL);
 }
 
 int
@@ -58,6 +61,7 @@ main (int argc, char *argv[])
   ECS_COMPONENT (ecs, hover_c);
   ECS_COMPONENT (ecs, margins_c);
   ECS_COMPONENT (ecs, origin_c);
+  ECS_COMPONENT (ecs, resize_c);
   ECS_COMPONENT (ecs, sprite_c);
   ECS_COMPONENT (ecs, text_c);
 
@@ -65,24 +69,30 @@ main (int argc, char *argv[])
   {
     ecs_entity_t ent = ecs_entity (ecs, { .name = "box1" });
     bounds_c *bounds = ecs_ensure (ecs, ent, bounds_c);
-    bounds->size = (SDL_FPoint){ 50.f, 50.f };
+    bounds->size = (SDL_FPoint){ 70.f, 70.f };
     bounds->b_can_be_scaled = true;
     box_c *box = ecs_ensure (ecs, ent, box_c);
     box->b_uses_color = false;
     box->b_is_shown = true;
     box->b_is_filled = false;
+    click_c *click = ecs_ensure (ecs, ent, click_c);
+    click->toggled_r = 255u;
+    click->toggled_g = 255u;
+    click->toggled_b = 0u;
     color_c *color = ecs_ensure (ecs, ent, color_c);
     color->default_r = 0u;
     color->default_g = 0u;
     color->default_b = 0u;
+    ecs_add (ecs, ent, hover_c);
     margins_c *margins = ecs_ensure (ecs, ent, margins_c);
     margins->value = (struct margins){
-      .top = 4.f, .left = 5.f, .bottom = 4.f, .right = 5.f
+      .top = 12.f, .left = 12.f, .bottom = 12.f, .right = 12.f
     };
     origin_c *origin = ecs_ensure (ecs, ent, origin_c);
     origin->relative = (SDL_FPoint){ 100.f, 200.f };
     origin->b_can_be_scaled = true;
     origin->b_is_center = false;
+    ecs_add (ecs, ent, resize_c);
     text_c *text = ecs_ensure (ecs, ent, text_c);
     string_init_set_str (text->content, "hello, world");
     text->font_size = 4u;
@@ -115,7 +125,7 @@ main (int argc, char *argv[])
     ecs_add (ecs, ent, drag_c);
     ecs_add (ecs, ent, hover_c);
     origin_c *origin = ecs_ensure (ecs, ent, origin_c);
-    origin->relative = (SDL_FPoint){ 60.f, 60.f };
+    origin->relative = (SDL_FPoint){ 80.f, 80.f };
     origin->b_can_be_scaled = true;
     origin->b_is_center = false;
     ecs_add_pair (ecs, ent, EcsChildOf, ecs_lookup (ecs, "box1"));

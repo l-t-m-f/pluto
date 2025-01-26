@@ -20,6 +20,7 @@ ECS_COMPONENT_DECLARE (drag_c);
 ECS_COMPONENT_DECLARE (hover_c);
 ECS_COMPONENT_DECLARE (margins_c);
 ECS_COMPONENT_DECLARE (origin_c);
+ECS_COMPONENT_DECLARE (resize_c);
 ECS_COMPONENT_DECLARE (sprite_c);
 ECS_COMPONENT_DECLARE (text_c);
 
@@ -163,6 +164,21 @@ origin (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       origin[i].b_is_center = false;
       origin[i].b_can_be_scaled = false;
       origin[i].b_is_screen_based = false;
+    }
+}
+
+void
+resize (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  resize_c *resize = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      resize[i].b_state = false;
+      SDL_memset (resize[i].from, true, sizeof (bool) * 9);
+      resize[i].toggled_r = 255u;
+      resize[i].toggled_g = 255u;
+      resize[i].toggled_b = 255u;
+      resize[i].toggled_a = 255u;
     }
 }
 
@@ -490,7 +506,7 @@ system_hover_toggle (ecs_iter_t *it)
                                     .y = origin[i].world.y,
                                     .w = bounds[i].size.x,
                                     .h = bounds[i].size.y };
-      SDL_FPoint mouse_position = core->input_man->mouse.position.window;
+      SDL_FPoint mouse_origin = core->input_man->mouse.position.window;
       if (origin[i].b_can_be_scaled == true)
         {
           dest.x *= core->scale;
@@ -512,29 +528,115 @@ system_hover_toggle (ecs_iter_t *it)
 
       hover[i].b_state = false;
 
-      if ((mouse_position.x >= collider.x && mouse_position.x <= collider.w)
-          && (mouse_position.y >= collider.y
-              && mouse_position.y <= collider.h))
+      if ((mouse_origin.x >= collider.x && mouse_origin.x <= collider.w)
+          && (mouse_origin.y >= collider.y && mouse_origin.y <= collider.h))
         {
           hover[i].b_state = true;
         }
     }
 }
 
-static void
-system_margins_render_helper (SDL_Renderer *rend, const margins_c *margins,
-                              const Sint32 handle_type, const SDL_FRect *rect,
-                              Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+void
+system_margins_check_handles (ecs_iter_t *it)
 {
-//  if (margins->current_handle == handle_type)
-//    {
-//      SDL_SetRenderDrawColor (rend, 255, 255, 255, 255);
-//    }
-  SDL_RenderRect (rend, rect);
-//  if (margins->current_handle == handle_type)
-//    {
-//      SDL_SetRenderDrawColor (rend, r, g, b, a);
-//    }
+  const core_s *core = ecs_singleton_get (it->world, core_s);
+  const struct input_man *input_man = core->input_man;
+
+  margins_c *margins = ecs_field (it, margins_c, 0);
+
+  origin_c *origin = ecs_field (it, origin_c, 1);
+  bounds_c *bounds = ecs_field (it, bounds_c, 2);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      SDL_FPoint pos = origin[i].world;
+      SDL_FPoint size = bounds[i].size;
+      struct margins values = margins[i].value;
+
+      if (origin[i].b_can_be_scaled == true)
+        {
+          pos.x *= core->scale;
+          pos.y *= core->scale;
+        }
+      if (bounds[i].b_can_be_scaled == true)
+        {
+          size.x *= core->scale;
+          size.y *= core->scale;
+          values.top *= core->scale;
+          values.left *= core->scale;
+          values.bottom *= core->scale;
+          values.right *= core->scale;
+        }
+
+      /* This part stores the 8 possible handles boundaries as four arrays.
+       * The indices are labelled with comments. Each boundary array is
+       * accessed during the inner loop and used to compute a temporary
+       * rectangle corresponding to the handle's area to test against the
+       * mouse position.
+       */
+      /* clang-format off */
+      float left_boundaries[MARGIN_HANDLE_TYPE_MAX - 1] = {
+        (pos.x + values.left),           /* Top */
+        (pos.x),                          /* Top-left */
+        (pos.x),                          /* Left */
+        (pos.x),                          /* Bot-left */
+        (pos.x + values.left),           /* Bot */
+        (pos.x + size.x - values.right), /* Bot-right */
+        (pos.x + size.x - values.right), /* Right */
+        (pos.x + size.x - values.right), /* Top-right */
+      };
+      float top_boundaries[MARGIN_HANDLE_TYPE_MAX - 1] = {
+        (pos.y),                           /* Top */
+        (pos.y),                           /* Top-left */
+        (pos.y + values.top),             /* Left */
+        (pos.y + size.y - values.bottom), /* Bot-left */
+        (pos.y + size.y - values.bottom), /* Bot */
+        (pos.y + size.y - values.bottom), /* Bot-right */
+        (pos.y + values.top),             /* Right */
+        (pos.y),                           /* Top-right */
+      };
+      float right_boundaries[MARGIN_HANDLE_TYPE_MAX - 1] = {
+        (pos.x + size.x - values.right),  /* Top */
+        (pos.x + values.left),            /* Top-left */
+        (pos.x + values.left),            /* Left */
+        (pos.x + values.left),            /* Bot-left */
+        (pos.x + size.x - values.right),  /* Bot */
+        (pos.x + size.x),                  /* Bot-right */
+        (pos.x + size.x),                  /* Right */
+        (pos.x + size.x),                  /* Top-right */
+      };
+      float bot_boundaries[MARGIN_HANDLE_TYPE_MAX - 1] = {
+        (pos.y + values.top),             /* Top */
+        (pos.y + values.top),             /* Top-left */
+        (pos.y + size.y - values.bottom), /* Left */
+        (pos.y + size.y),                  /* Bot-left */
+        (pos.y + size.y),                  /* Bot */
+        (pos.y + size.y),                  /* Bot-right */
+        (pos.y + size.y - values.bottom), /* Right */
+        (pos.y + values.top),             /* Top-right */
+      };
+      /* clang-format on */
+
+      bool match_found = false;
+
+      for (Sint32 j = MARGIN_HANDLE_TOP_EDGE; j < MARGIN_HANDLE_TYPE_MAX; j++)
+        {
+
+          if (input_man->mouse.position.window.x > left_boundaries[j - 1]
+              && input_man->mouse.position.window.x < right_boundaries[j - 1]
+              && input_man->mouse.position.window.y > top_boundaries[j - 1]
+              && input_man->mouse.position.window.y < bot_boundaries[j - 1])
+            {
+              margins[i].current_handle = j;
+              match_found = true;
+              break;
+            }
+        }
+      if (match_found == false)
+        {
+          margins[i].current_handle = MARGIN_HANDLE_NONE;
+        }
+    }
 }
 
 void
@@ -661,42 +763,18 @@ system_margins_draw (ecs_iter_t *it)
                               margins[i].corner_g, margins[i].corner_b,
                               margins[i].corner_a);
 
-      system_margins_render_helper (
-          core->rend, &margins[i], MARGIN_HANDLE_TOP_LEFT_CORNER,
-          &top_left_corner, margins[i].corner_r, margins[i].corner_g,
-          margins[i].corner_b, margins[i].corner_a);
-      system_margins_render_helper (
-          core->rend, &margins[i], MARGIN_HANDLE_TOP_RIGHT_CORNER,
-          &top_right_corner, margins[i].corner_r, margins[i].corner_g,
-          margins[i].corner_b, margins[i].corner_a);
-      system_margins_render_helper (
-          core->rend, &margins[i], MARGIN_HANDLE_BOT_LEFT_CORNER,
-          &bottom_left_corner, margins[i].corner_r, margins[i].corner_g,
-          margins[i].corner_b, margins[i].corner_a);
-      system_margins_render_helper (
-          core->rend, &margins[i], MARGIN_HANDLE_BOT_RIGHT_CORNER,
-          &bottom_right_corner, margins[i].corner_r, margins[i].corner_g,
-          margins[i].corner_b, margins[i].corner_a);
+      SDL_RenderRect (core->rend, &top_left_corner);
+      SDL_RenderRect (core->rend, &top_right_corner);
+      SDL_RenderRect (core->rend, &bottom_left_corner);
+      SDL_RenderRect (core->rend, &bottom_right_corner);
 
       SDL_SetRenderDrawColor (core->rend, margins[i].edge_r, margins[i].edge_g,
                               margins[i].edge_b, margins[i].edge_a);
 
-      system_margins_render_helper (core->rend, &margins[i],
-                                    MARGIN_HANDLE_TOP_EDGE, &top_edge_rect,
-                                    margins[i].edge_r, margins[i].edge_g,
-                                    margins[i].edge_b, margins[i].edge_a);
-      system_margins_render_helper (core->rend, &margins[i],
-                                    MARGIN_HANDLE_BOT_EDGE, &bottom_edge_rect,
-                                    margins[i].edge_r, margins[i].edge_g,
-                                    margins[i].edge_b, margins[i].edge_a);
-      system_margins_render_helper (core->rend, &margins[i],
-                                    MARGIN_HANDLE_LEFT_EDGE, &left_edge_rect,
-                                    margins[i].edge_r, margins[i].edge_g,
-                                    margins[i].edge_b, margins[i].edge_a);
-      system_margins_render_helper (core->rend, &margins[i],
-                                    MARGIN_HANDLE_RIGHT_EDGE, &right_edge_rect,
-                                    margins[i].edge_r, margins[i].edge_g,
-                                    margins[i].edge_b, margins[i].edge_a);
+      SDL_RenderRect (core->rend, &top_edge_rect);
+      SDL_RenderRect (core->rend, &bottom_edge_rect);
+      SDL_RenderRect (core->rend, &left_edge_rect);
+      SDL_RenderRect (core->rend, &right_edge_rect);
     }
 }
 
@@ -711,6 +789,95 @@ system_origin_bind_relative (ecs_iter_t *it)
           continue;
         }
       origin[i].relative = origin[i].relative_callback (it->world);
+    }
+}
+
+void
+system_resize_apply_delta (ecs_iter_t *it)
+{
+
+  resize_c *resize = ecs_field (it, resize_c, 0);
+
+  margins_c *margins = ecs_field (it, margins_c, 1);
+  origin_c *origin = ecs_field (it, origin_c, 2);
+  bounds_c *bounds = ecs_field (it, bounds_c, 3);
+  click_c *click = ecs_field (it, click_c, 4);
+
+  const core_s *core = ecs_singleton_get (it->world, core_s);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (click[i].b_state == false)
+        {
+          continue;
+        }
+
+      SDL_FPoint delta = core->input_man->mouse.motion;
+
+      if (bounds[i].b_can_be_scaled == true)
+        {
+          delta.x *= core->scale;
+          delta.y *= core->scale;
+        }
+
+      if (resize[i].from[MARGIN_HANDLE_BOT_RIGHT_CORNER] == true
+          && margins[i].current_handle == MARGIN_HANDLE_TOP_RIGHT_CORNER)
+        {
+          bounds[i].size.x += delta.x;
+          origin[i].relative.y += delta.y;
+          bounds[i].size.y -= delta.y;
+          resize[i].b_state = true;
+        }
+      else if (resize[i].from[MARGIN_HANDLE_TOP_EDGE] == true
+               && margins[i].current_handle == MARGIN_HANDLE_TOP_EDGE)
+        {
+          origin[i].relative.y += delta.y;
+          bounds[i].size.y -= delta.y;
+          resize[i].b_state = true;
+        }
+      else if (resize[i].from[MARGIN_HANDLE_TOP_LEFT_CORNER] == true
+               && margins[i].current_handle == MARGIN_HANDLE_TOP_LEFT_CORNER)
+        {
+          origin[i].relative.x += delta.x;
+          bounds[i].size.x -= delta.x;
+          origin[i].relative.y += delta.y;
+          bounds[i].size.y -= delta.y;
+          resize[i].b_state = true;
+        }
+      else if (resize[i].from[MARGIN_HANDLE_LEFT_EDGE] == true
+               && margins[i].current_handle == MARGIN_HANDLE_LEFT_EDGE)
+        {
+          origin[i].relative.x += delta.x;
+          bounds[i].size.x -= delta.x;
+          resize[i].b_state = true;
+        }
+      else if (resize[i].from[MARGIN_HANDLE_BOT_LEFT_CORNER] == true
+               && margins[i].current_handle == MARGIN_HANDLE_BOT_LEFT_CORNER)
+        {
+          origin[i].relative.x += delta.x;
+          bounds[i].size.x -= delta.x;
+          bounds[i].size.y += delta.y;
+          resize[i].b_state = true;
+        }
+      else if (resize[i].from[MARGIN_HANDLE_BOT_EDGE] == true
+               && margins[i].current_handle == MARGIN_HANDLE_BOT_EDGE)
+        {
+          bounds[i].size.y += delta.y;
+          resize[i].b_state = true;
+        }
+      else if (resize[i].from[MARGIN_HANDLE_BOT_RIGHT_CORNER] == true
+               && margins[i].current_handle == MARGIN_HANDLE_BOT_RIGHT_CORNER)
+        {
+          bounds[i].size.x += delta.x;
+          bounds[i].size.y += delta.y;
+          resize[i].b_state = true;
+        }
+      else if (resize[i].from[MARGIN_HANDLE_RIGHT_EDGE] == true
+               && margins[i].current_handle == MARGIN_HANDLE_RIGHT_EDGE)
+        {
+          bounds[i].size.x += delta.x;
+          resize[i].b_state = true;
+        }
     }
 }
 
@@ -996,6 +1163,32 @@ init_pluto_systems (ecs_world_t *ecs)
   }
   {
     ecs_entity_t ent
+        = ecs_entity (ecs, {
+                               .name = "system_margins_check_handles",
+                           });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (margins_c) },
+                                          { .id = ecs_id (origin_c) },
+                                          { .id = ecs_id (bounds_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_margins_check_handles });
+  }
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, {
+                               .name = "system_resize_apply_delta",
+                           });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (resize_c) },
+                                          { .id = ecs_id (margins_c) },
+                                          { .id = ecs_id (origin_c) },
+                                          { .id = ecs_id (bounds_c) },
+                                          { .id = ecs_id (click_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_resize_apply_delta });
+  }
+  {
+    ecs_entity_t ent
         = ecs_entity (ecs, { .name = "system_origin_calc_world",
                              .add = ecs_ids (ecs_dependson (
                                  ecs_lookup (ecs, "pre_render_phase"))) });
@@ -1159,6 +1352,9 @@ init_pluto_hooks (ecs_world_t *ecs)
   ecs_type_hooks_t origin_hooks = { .ctor = origin };
   ecs_set_hooks_id (ecs, ecs_id (origin_c), &origin_hooks);
 
+  ecs_type_hooks_t resize_hooks = { .ctor = resize };
+  ecs_set_hooks_id (ecs, ecs_id (resize_c), &resize_hooks);
+
   ecs_type_hooks_t sprite_hooks = { .ctor = sprite };
   ecs_set_hooks_id (ecs, ecs_id (sprite_c), &sprite_hooks);
 
@@ -1227,6 +1423,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, hover_c);
   ECS_COMPONENT_DEFINE (ecs, margins_c);
   ECS_COMPONENT_DEFINE (ecs, origin_c);
+  ECS_COMPONENT_DEFINE (ecs, resize_c);
   ECS_COMPONENT_DEFINE (ecs, sprite_c);
   ECS_COMPONENT_DEFINE (ecs, text_c);
   core_s *core = init_pluto_sdl (ecs, window_size);
