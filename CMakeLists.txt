@@ -97,6 +97,7 @@ endif ()
 message("-- Executable compilation...")
 set(SOURCES
         src/main.c
+        src/pluto.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
