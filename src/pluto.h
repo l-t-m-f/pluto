@@ -7,12 +7,31 @@
 #include "game_modules/animation.h"
 #include "game_modules/render_target.h"
 
+#define MARGIN_HANDLE_NONE 0
+#define MARGIN_HANDLE_TOP_EDGE 1
+#define MARGIN_HANDLE_TOP_LEFT_CORNER 2
+#define MARGIN_HANDLE_LEFT_EDGE 3
+#define MARGIN_HANDLE_BOT_LEFT_CORNER 4
+#define MARGIN_HANDLE_BOT_EDGE 5
+#define MARGIN_HANDLE_BOT_RIGHT_CORNER 6
+#define MARGIN_HANDLE_RIGHT_EDGE 7
+#define MARGIN_HANDLE_TOP_RIGHT_CORNER 8
+#define MARGIN_HANDLE_TYPE_MAX 9
+
 #define SPRITE_RENDER_TYPE_DEFAULT 0
 #define SPRITE_RENDER_TYPE_ANIMATED 1
 #define SPRITE_RENDER_TYPE_NGRID 2
 #define SPRITE_RENDER_TYPE_TILED 3
 #define SPRITE_RENDER_TYPE_TARGET 4
 #define SPRITE_RENDER_TYPE_MAX 5
+
+struct margins
+{
+  float top;
+  float left;
+  float bottom;
+  float right;
+};
 
 /******************************/
 /******** Components **********/
@@ -100,6 +119,20 @@ typedef struct component_hover
   Uint8 toggled_g;
   Uint8 toggled_b;
 } hover_c;
+
+typedef struct component_margins
+{
+  struct margins value;
+  Uint8 corner_r;
+  Uint8 corner_g;
+  Uint8 corner_b;
+  Uint8 corner_a;
+  Uint8 edge_r;
+  Uint8 edge_g;
+  Uint8 edge_b;
+  Uint8 edge_a;
+  Sint32 current_handle;
+} margins_c;
 
 typedef struct component_origin
 {

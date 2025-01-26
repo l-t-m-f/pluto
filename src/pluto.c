@@ -18,6 +18,7 @@ ECS_COMPONENT_DECLARE (click_c);
 ECS_COMPONENT_DECLARE (color_c);
 ECS_COMPONENT_DECLARE (drag_c);
 ECS_COMPONENT_DECLARE (hover_c);
+ECS_COMPONENT_DECLARE (margins_c);
 ECS_COMPONENT_DECLARE (origin_c);
 ECS_COMPONENT_DECLARE (sprite_c);
 ECS_COMPONENT_DECLARE (text_c);
@@ -126,6 +127,27 @@ hover (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       hover[i].toggled_r = 0u;
       hover[i].toggled_g = 125u;
       hover[i].toggled_b = 125u;
+    }
+}
+
+void
+margins (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  margins_c *margins = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      margins[i].value = (struct margins){
+        .top = 0.f, .left = 0.f, .bottom = 0.f, .right = 0.f
+      };
+      margins[i].edge_r = 155u;
+      margins[i].edge_g = 155u;
+      margins[i].edge_b = 155u;
+      margins[i].edge_a = 255u;
+      margins[i].corner_r = 255u;
+      margins[i].corner_g = 0u;
+      margins[i].corner_b = 95u;
+      margins[i].corner_a = 255u;
+      margins[i].current_handle = MARGIN_HANDLE_NONE;
     }
 }
 
@@ -500,6 +522,185 @@ system_hover_toggle (ecs_iter_t *it)
 }
 
 static void
+system_margins_render_helper (SDL_Renderer *rend, const margins_c *margins,
+                              const Sint32 handle_type, const SDL_FRect *rect,
+                              Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+{
+//  if (margins->current_handle == handle_type)
+//    {
+//      SDL_SetRenderDrawColor (rend, 255, 255, 255, 255);
+//    }
+  SDL_RenderRect (rend, rect);
+//  if (margins->current_handle == handle_type)
+//    {
+//      SDL_SetRenderDrawColor (rend, r, g, b, a);
+//    }
+}
+
+void
+system_margins_draw (ecs_iter_t *it)
+{
+  const core_s *core = ecs_singleton_get (it->world, core_s);
+
+  margins_c *margins = ecs_field (it, margins_c, 0);
+
+  origin_c *origin = ecs_field (it, origin_c, 1);
+  bounds_c *bounds = ecs_field (it, bounds_c, 2);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+
+      SDL_FPoint pos = origin[i].world;
+      SDL_FPoint size = bounds[i].size;
+      struct margins margins_values
+          = { margins[i].value.top, margins[i].value.left,
+              margins[i].value.bottom, margins[i].value.right };
+
+      if (margins_values.top == 0.f && margins_values.left == 0.f
+          && margins_values.bottom == 0.f && margins_values.right == 0.f)
+        {
+          continue;
+        }
+      if (origin[i].b_can_be_scaled == true)
+        {
+          pos.x *= core->scale;
+          pos.y *= core->scale;
+        }
+      if (bounds[i].b_can_be_scaled == true)
+        {
+          size.x *= core->scale;
+          size.y *= core->scale;
+          margins_values.top *= core->scale;
+          margins_values.left *= core->scale;
+          margins_values.bottom *= core->scale;
+          margins_values.right *= core->scale;
+        }
+
+      const float offset = 0.f;
+
+      /* Corners are specified from top-left counter clock-wise. */
+      SDL_FRect top_left_corner
+          = (SDL_FRect){ pos.x, pos.y, margins_values.left,
+                         margins_values.top };
+
+      SDL_FRect top_right_corner
+          = (SDL_FRect){ pos.x + size.x - margins_values.right, pos.y,
+                         margins_values.right, margins_values.top };
+
+      SDL_FRect bottom_left_corner
+          = (SDL_FRect){ pos.x, pos.y + size.y - margins_values.bottom,
+                         margins_values.left, margins_values.bottom };
+
+      SDL_FRect bottom_right_corner
+          = (SDL_FRect){ pos.x + size.x - margins_values.right,
+                         pos.y + size.y - margins_values.bottom,
+                         margins_values.right, margins_values.bottom };
+
+      /* Edges are specified in a WASD configuration. */
+      SDL_FRect top_edge_rect
+          = (SDL_FRect){ pos.x + margins_values.left, pos.y,
+                         size.x - (margins_values.right * 2),
+                         margins_values.top };
+
+      SDL_FRect left_edge_rect
+          = (SDL_FRect){ pos.x, pos.y + margins_values.top,
+                         margins_values.left,
+                         size.y - margins_values.bottom - margins_values.top };
+
+      SDL_FRect bottom_edge_rect = (SDL_FRect){
+        pos.x + margins_values.left, pos.y + size.y - margins_values.bottom,
+        size.x - (margins_values.right * 2), margins_values.bottom
+      };
+
+      SDL_FRect right_edge_rect
+          = (SDL_FRect){ pos.x + size.x - margins_values.right,
+                         pos.y + margins_values.top, margins_values.right,
+                         size.y - margins_values.bottom - margins_values.top };
+
+      top_left_corner.x += offset;
+      top_left_corner.y += offset;
+      top_left_corner.w -= offset;
+      top_left_corner.h -= offset;
+
+      top_right_corner.x += offset;
+      top_right_corner.y += offset;
+      top_right_corner.w -= offset * 2;
+      top_right_corner.h -= offset;
+
+      bottom_left_corner.x += offset;
+      bottom_left_corner.y += offset;
+      bottom_left_corner.w -= offset;
+      bottom_left_corner.h -= offset * 2;
+
+      bottom_right_corner.x += offset;
+      bottom_right_corner.y += offset;
+      bottom_right_corner.w -= offset * 2;
+      bottom_right_corner.h -= offset * 2;
+
+      top_edge_rect.x += offset;
+      top_edge_rect.y += offset;
+      top_edge_rect.w -= offset;
+      top_edge_rect.h -= offset;
+
+      left_edge_rect.x += offset;
+      left_edge_rect.y += offset;
+      left_edge_rect.w -= offset;
+      left_edge_rect.h -= offset;
+
+      bottom_edge_rect.x += offset;
+      bottom_edge_rect.y += offset;
+      bottom_edge_rect.w -= offset;
+      bottom_edge_rect.h -= offset * 2;
+
+      right_edge_rect.x += offset;
+      right_edge_rect.y += offset;
+      right_edge_rect.w -= offset * 2;
+      right_edge_rect.h -= offset;
+
+      SDL_SetRenderDrawColor (core->rend, margins[i].corner_r,
+                              margins[i].corner_g, margins[i].corner_b,
+                              margins[i].corner_a);
+
+      system_margins_render_helper (
+          core->rend, &margins[i], MARGIN_HANDLE_TOP_LEFT_CORNER,
+          &top_left_corner, margins[i].corner_r, margins[i].corner_g,
+          margins[i].corner_b, margins[i].corner_a);
+      system_margins_render_helper (
+          core->rend, &margins[i], MARGIN_HANDLE_TOP_RIGHT_CORNER,
+          &top_right_corner, margins[i].corner_r, margins[i].corner_g,
+          margins[i].corner_b, margins[i].corner_a);
+      system_margins_render_helper (
+          core->rend, &margins[i], MARGIN_HANDLE_BOT_LEFT_CORNER,
+          &bottom_left_corner, margins[i].corner_r, margins[i].corner_g,
+          margins[i].corner_b, margins[i].corner_a);
+      system_margins_render_helper (
+          core->rend, &margins[i], MARGIN_HANDLE_BOT_RIGHT_CORNER,
+          &bottom_right_corner, margins[i].corner_r, margins[i].corner_g,
+          margins[i].corner_b, margins[i].corner_a);
+
+      SDL_SetRenderDrawColor (core->rend, margins[i].edge_r, margins[i].edge_g,
+                              margins[i].edge_b, margins[i].edge_a);
+
+      system_margins_render_helper (core->rend, &margins[i],
+                                    MARGIN_HANDLE_TOP_EDGE, &top_edge_rect,
+                                    margins[i].edge_r, margins[i].edge_g,
+                                    margins[i].edge_b, margins[i].edge_a);
+      system_margins_render_helper (core->rend, &margins[i],
+                                    MARGIN_HANDLE_BOT_EDGE, &bottom_edge_rect,
+                                    margins[i].edge_r, margins[i].edge_g,
+                                    margins[i].edge_b, margins[i].edge_a);
+      system_margins_render_helper (core->rend, &margins[i],
+                                    MARGIN_HANDLE_LEFT_EDGE, &left_edge_rect,
+                                    margins[i].edge_r, margins[i].edge_g,
+                                    margins[i].edge_b, margins[i].edge_a);
+      system_margins_render_helper (core->rend, &margins[i],
+                                    MARGIN_HANDLE_RIGHT_EDGE, &right_edge_rect,
+                                    margins[i].edge_r, margins[i].edge_g,
+                                    margins[i].edge_b, margins[i].edge_a);
+    }
+}
+
+static void
 system_origin_bind_relative (ecs_iter_t *it)
 {
   origin_c *origin = ecs_field (it, origin_c, 0);
@@ -858,6 +1059,18 @@ init_pluto_systems (ecs_world_t *ecs)
   {
     ecs_entity_t ent = ecs_entity (
         ecs,
+        { .name = "system_margins_draw",
+          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (margins_c) },
+                                          { .id = ecs_id (origin_c) },
+                                          { .id = ecs_id (bounds_c) } } };
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = system_margins_draw });
+  }
+  {
+    ecs_entity_t ent = ecs_entity (
+        ecs,
         { .name = "system_sprite_draw",
           .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
     ecs_query_desc_t query
@@ -940,6 +1153,9 @@ init_pluto_hooks (ecs_world_t *ecs)
   ecs_type_hooks_t hover_hooks = { .ctor = hover };
   ecs_set_hooks_id (ecs, ecs_id (hover_c), &hover_hooks);
 
+  ecs_type_hooks_t margins_hooks = { .ctor = margins };
+  ecs_set_hooks_id (ecs, ecs_id (margins_c), &margins_hooks);
+
   ecs_type_hooks_t origin_hooks = { .ctor = origin };
   ecs_set_hooks_id (ecs, ecs_id (origin_c), &origin_hooks);
 
@@ -1009,6 +1225,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, color_c);
   ECS_COMPONENT_DEFINE (ecs, drag_c);
   ECS_COMPONENT_DEFINE (ecs, hover_c);
+  ECS_COMPONENT_DEFINE (ecs, margins_c);
   ECS_COMPONENT_DEFINE (ecs, origin_c);
   ECS_COMPONENT_DEFINE (ecs, sprite_c);
   ECS_COMPONENT_DEFINE (ecs, text_c);

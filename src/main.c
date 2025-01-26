@@ -56,6 +56,7 @@ main (int argc, char *argv[])
   ECS_COMPONENT (ecs, color_c);
   ECS_COMPONENT (ecs, drag_c);
   ECS_COMPONENT (ecs, hover_c);
+  ECS_COMPONENT (ecs, margins_c);
   ECS_COMPONENT (ecs, origin_c);
   ECS_COMPONENT (ecs, sprite_c);
   ECS_COMPONENT (ecs, text_c);
@@ -69,11 +70,15 @@ main (int argc, char *argv[])
     box_c *box = ecs_ensure (ecs, ent, box_c);
     box->b_uses_color = false;
     box->b_is_shown = true;
-    box->b_is_filled = true;
+    box->b_is_filled = false;
     color_c *color = ecs_ensure (ecs, ent, color_c);
     color->default_r = 0u;
     color->default_g = 0u;
     color->default_b = 0u;
+    margins_c *margins = ecs_ensure (ecs, ent, margins_c);
+    margins->value = (struct margins){
+      .top = 4.f, .left = 5.f, .bottom = 4.f, .right = 5.f
+    };
     origin_c *origin = ecs_ensure (ecs, ent, origin_c);
     origin->relative = (SDL_FPoint){ 100.f, 200.f };
     origin->b_can_be_scaled = true;
