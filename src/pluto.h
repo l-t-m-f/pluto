@@ -55,13 +55,39 @@ typedef struct component_color
 
 typedef struct component_origin
 {
-  SDL_FPoint position;
+  SDL_FPoint world;
+  SDL_FPoint relative;
   void (*position_callback) (ecs_world_t *, SDL_FPoint *);
   bool b_is_center;
   bool b_can_be_scaled;
   bool b_is_screen_based;
 } origin_c;
 
-SDL_Renderer * init_pluto(ecs_world_t *ecs, const SDL_Point window_size);
+typedef struct component_text
+{
+  string_t content;
+  Sint32 align_h;
+  Sint32 align_v;
+  Uint8 font_size;
+  bool b_is_shown;
+  bool b_uses_color;
+} text_c;
+
+app_s *init_pluto (ecs_world_t *ecs, SDL_Point window_size);
+
+extern void handle_key_press (struct input_man *input_man, SDL_Scancode key,
+                              void *param);
+extern void handle_key_release (struct input_man *input_man, SDL_Scancode key,
+                                void *param);
+extern void handle_key_hold (struct input_man *input_man, SDL_Scancode key,
+                             void *param);
+extern void handle_mouse_press (struct input_man *input_man, SDL_FPoint pos,
+                                Uint8 button, void *param);
+extern void handle_mouse_release (struct input_man *input_man, SDL_FPoint pos,
+                                  Uint8 button, void *param);
+extern void handle_mouse_hold (struct input_man *input_man, SDL_FPoint pos,
+                               Uint8 button, void *param);
+extern void handle_mouse_motion (struct input_man *input_man, SDL_FPoint pos,
+                                 SDL_FPoint rel, void *param);
 
 #endif /* PLUTO_MODULE_H */

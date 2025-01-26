@@ -2,8 +2,10 @@
 
 #include "SDL3_ttf/SDL_ttf.h"
 
+#include "game_modules/input_man.h"
 #include "game_modules/log.h"
 #include "game_modules/profiling.h"
+#include "game_modules/text_man.h"
 
 ECS_COMPONENT_DECLARE (app_s);
 
@@ -12,6 +14,7 @@ ECS_COMPONENT_DECLARE (bounds_c);
 ECS_COMPONENT_DECLARE (box_c);
 ECS_COMPONENT_DECLARE (color_c);
 ECS_COMPONENT_DECLARE (origin_c);
+ECS_COMPONENT_DECLARE (text_c);
 
 /******************************/
 /*********** Hooks ************/
@@ -72,7 +75,8 @@ origin (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   origin_c *origin = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      origin[i].position = (SDL_FPoint){ 0.f, 0.f };
+      origin[i].world = (SDL_FPoint){ 0.f, 0.f };
+      origin[i].relative = (SDL_FPoint){ 0.f, 0.f };
       origin[i].position_callback = NULL;
       origin[i].b_is_center = false;
       origin[i].b_can_be_scaled = false;
@@ -113,7 +117,7 @@ system_box_draw (ecs_iter_t *it)
         {
           continue;
         }
-      SDL_FRect dest = (SDL_FRect){ origin[i].position.x, origin[i].position.y,
+      SDL_FRect dest = (SDL_FRect){ origin[i].world.x, origin[i].world.y,
                                     bounds[i].size.x, bounds[i].size.y };
 
       Uint8 box_r = 255u;
@@ -158,6 +162,116 @@ system_box_draw (ecs_iter_t *it)
     }
 }
 
+static void
+system_color_set (ecs_iter_t *it)
+{
+  color_c *color = ecs_field (it, color_c, 0);
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      color[i].r = color[i].default_r;
+      color[i].g = color[i].default_g;
+      color[i].b = color[i].default_b;
+    }
+}
+
+static void
+system_origin_calc_hierarchy (ecs_iter_t *it)
+{
+  origin_c *origin = ecs_field (it, origin_c, 0);
+  Sint8 p_origin_id = 1;
+  origin_c *p_origin = NULL;
+  if (ecs_field_is_set (it, p_origin_id) == true)
+    {
+      p_origin = ecs_field (it, origin_c, p_origin_id);
+    }
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (p_origin != NULL && &p_origin[i] != NULL)
+        {
+          origin[i].world.x = p_origin->world.x + origin[i].relative.x;
+          origin[i].world.y = p_origin->world.y + origin[i].relative.y;
+        }
+      else
+        {
+          origin[i].world.x = origin[i].relative.x;
+          origin[i].world.y = origin[i].relative.y;
+        }
+    }
+}
+
+static void
+system_text_draw (ecs_iter_t *it)
+{
+  const app_s *app = ecs_singleton_get (it->world, app_s);
+
+  text_c *text = ecs_field (it, text_c, 0);
+
+  origin_c *origin = ecs_field (it, origin_c, 1);
+  Sint8 alpha_id = 2;
+  alpha_c *alpha_opt = NULL;
+  if (ecs_field_is_set (it, alpha_id) == true)
+    {
+      alpha_opt = ecs_field (it, alpha_c, alpha_id);
+    }
+  Sint8 color_id = 3;
+  color_c *color_opt = NULL;
+  if (ecs_field_is_set (it, color_id) == true)
+    {
+      color_opt = ecs_field (it, color_c, color_id);
+    }
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (ecs_has_pair (it->world, it->entities[i],
+                        ecs_lookup (it->world, "scene"), EcsAny)
+              == true
+          && ecs_has_pair (it->world, it->entities[i],
+                           ecs_lookup (it->world, "scene"), app->current_scene)
+                 == false)
+        {
+          continue;
+        }
+      if (text[i].b_is_shown == false)
+        {
+          continue;
+        }
+      Uint8 text_r = 255u;
+      Uint8 text_g = 255u;
+      Uint8 text_b = 255u;
+      Uint8 alpha = 255u;
+      if (text[i].b_uses_color == true)
+        {
+          if (color_opt != NULL && &color_opt[i] != NULL)
+            {
+              text_r = color_opt[i].r;
+              text_g = color_opt[i].g;
+              text_b = color_opt[i].b;
+            }
+          if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+            {
+              alpha = alpha_opt[i].value;
+            }
+        }
+      SDL_FPoint dest = origin[i].world;
+      if (origin[i].b_can_be_scaled == true)
+        {
+          dest.x *= app->scale;
+          dest.y *= app->scale;
+        }
+      struct text_params params = { .size = text[i].font_size,
+                                    .tint_r = text_r,
+                                    .tint_g = text_g,
+                                    .tint_b = text_b,
+                                    .alpha = alpha,
+                                    .face = "baby_jeepers",
+                                    .location = dest,
+                                    .align_h = text[i].align_h,
+                                    .align_v = text[i].align_v };
+      text_man_render_string (app->text_man, &params, text[i].content);
+    }
+}
+
 /******************************/
 /*********** Init *************/
 /******************************/
@@ -166,9 +280,31 @@ static void
 init_pluto_systems (ecs_world_t *ecs)
 {
   {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_origin_calc_hierarchy",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (origin_c) },
+                                          { .id = ecs_id (origin_c),
+                                            .src = { .id = EcsUp },
+                                            .oper = EcsOptional } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_origin_calc_hierarchy });
+  }
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_color_set",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (color_c) } } };
+    ecs_system (
+        ecs, { .entity = ent, .query = query, .callback = system_color_set });
+  }
+  {
     ecs_entity_t ent = ecs_entity (
         ecs,
-        { .name = "system_box_draw_objects",
+        { .name = "system_box_draw",
           .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
     ecs_query_desc_t query
         = { .terms = { { .id = ecs_id (box_c) },
@@ -179,8 +315,20 @@ init_pluto_systems (ecs_world_t *ecs)
     ecs_system (
         ecs, { .entity = ent, .query = query, .callback = system_box_draw });
   }
+  {
+    ecs_entity_t ent = ecs_entity (
+        ecs,
+        { .name = "system_text_draw",
+          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
+    ecs_query_desc_t query
+        = { .terms = { { .id = ecs_id (text_c) },
+                       { .id = ecs_id (origin_c) },
+                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+                       { .id = ecs_id (color_c), .oper = EcsOptional } } };
+    ecs_system (
+        ecs, { .entity = ent, .query = query, .callback = system_text_draw });
+  }
 }
-
 
 static void
 init_pluto_phases (ecs_world_t *ecs)
@@ -227,7 +375,7 @@ init_pluto_hooks (ecs_world_t *ecs)
   ecs_set_hooks_id (ecs, ecs_id (origin_c), &origin_hooks);
 }
 
-static SDL_Renderer *
+static app_s *
 init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
 {
   app_s *app = ecs_singleton_ensure (ecs, app_s);
@@ -250,12 +398,27 @@ init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
       SDL_VERSIONNUM_MAJOR (compiled_v), SDL_VERSIONNUM_MINOR (compiled_v),
       SDL_VERSIONNUM_MICRO (compiled_v), SDL_VERSIONNUM_MAJOR (linked_v),
       SDL_VERSIONNUM_MINOR (linked_v), SDL_VERSIONNUM_MICRO (linked_v));
+
   app->scale = 1.f;
   app->frame_data = SDL_calloc (1, sizeof (struct frame_data));
-  return app->rend;
+
+  text_man_create_font_book (&app->text_man, app->rend);
+
+
+  struct input_man_callbacks callbacks
+      = { .key_press_callback = handle_key_press,
+          .key_release_callback = handle_key_release,
+          .key_hold_callback = handle_key_hold,
+          .mouse_press_callback = handle_mouse_press,
+          .mouse_release_callback = handle_mouse_release,
+          .mouse_hold_callback = handle_mouse_hold,
+          .mouse_motion_callback = handle_mouse_motion };
+  input_man_init (&app->input_man, &callbacks);
+
+  return app;
 }
 
-SDL_Renderer *
+app_s *
 init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
 {
   ECS_COMPONENT_DEFINE (ecs, app_s);
@@ -264,9 +427,10 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, box_c);
   ECS_COMPONENT_DEFINE (ecs, color_c);
   ECS_COMPONENT_DEFINE (ecs, origin_c);
-  SDL_Renderer *rend = init_pluto_sdl (ecs, window_size);
+  ECS_COMPONENT_DEFINE (ecs, text_c);
+  app_s *app = init_pluto_sdl (ecs, window_size);
   init_pluto_hooks (ecs);
-  init_pluto_phases(ecs);
+  init_pluto_phases (ecs);
   init_pluto_systems (ecs);
-  return rend;
+  return app;
 }
