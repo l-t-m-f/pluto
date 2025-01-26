@@ -51,7 +51,9 @@ main (int argc, char *argv[])
   ECS_COMPONENT (ecs, alpha_c);
   ECS_COMPONENT (ecs, bounds_c);
   ECS_COMPONENT (ecs, box_c);
+  ECS_COMPONENT (ecs, click_c);
   ECS_COMPONENT (ecs, color_c);
+  ECS_COMPONENT (ecs, hover_c);
   ECS_COMPONENT (ecs, origin_c);
   ECS_COMPONENT (ecs, text_c);
 
@@ -98,6 +100,7 @@ main (int argc, char *argv[])
     color->default_r = 255u;
     color->default_g = 0u;
     color->default_b = 0u;
+    hover_c *hover = ecs_ensure (ecs, ent, hover_c);
     origin_c *origin = ecs_ensure (ecs, ent, origin_c);
     origin->relative = (SDL_FPoint){ 60.f, 60.f };
     origin->b_can_be_scaled = true;
@@ -115,13 +118,20 @@ main (int argc, char *argv[])
               SDL_Quit ();
               exit (0);
             }
-          if(e.type == SDL_EVENT_KEY_DOWN)
+          if (e.type == SDL_EVENT_KEY_DOWN)
             {
-              input_man_register_scancode (app->input_man, e.key.scancode, ecs);
+              input_man_register_scancode (app->input_man, e.key.scancode,
+                                           ecs);
             }
-          if(e.type == SDL_EVENT_KEY_UP)
+          if (e.type == SDL_EVENT_KEY_UP)
             {
-              input_man_unregister_scancode (app->input_man, e.key.scancode, ecs);
+              input_man_unregister_scancode (app->input_man, e.key.scancode,
+                                             ecs);
+            }
+          if (e.type == SDL_EVENT_MOUSE_MOTION)
+            {
+              input_man_try_handle_mouse_motion (app->input_man, e.motion,
+                                                 ecs);
             }
         }
       input_man_bounce_keys (app->input_man, ecs);

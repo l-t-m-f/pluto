@@ -42,6 +42,13 @@ typedef struct component_box
   bool b_uses_color;
 } box_c;
 
+typedef struct component_click
+{
+  void (*callback) (void *);
+  Uint16 callback_delay;
+  bool b_state;
+} click_c;
+
 typedef struct component_color
 {
   Uint8 r;
@@ -52,6 +59,14 @@ typedef struct component_color
   Uint8 default_b;
   bool b_should_reset;
 } color_c;
+
+typedef struct component_hover
+{
+  bool b_state;
+  Uint8 toggled_r;
+  Uint8 toggled_g;
+  Uint8 toggled_b;
+} hover_c;
 
 typedef struct component_origin
 {

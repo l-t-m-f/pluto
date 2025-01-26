@@ -12,7 +12,9 @@ ECS_COMPONENT_DECLARE (app_s);
 ECS_COMPONENT_DECLARE (alpha_c);
 ECS_COMPONENT_DECLARE (bounds_c);
 ECS_COMPONENT_DECLARE (box_c);
+ECS_COMPONENT_DECLARE (click_c);
 ECS_COMPONENT_DECLARE (color_c);
+ECS_COMPONENT_DECLARE (hover_c);
 ECS_COMPONENT_DECLARE (origin_c);
 ECS_COMPONENT_DECLARE (text_c);
 
@@ -54,6 +56,18 @@ box (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 }
 
 static void
+click (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  click_c *click = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      click[i].callback = NULL;
+      click[i].callback_delay = 0u;
+      click[i].b_state = false;
+    }
+}
+
+static void
 color (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 {
   color_c *color = ptr;
@@ -70,6 +84,19 @@ color (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 }
 
 static void
+hover (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  hover_c *hover = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      hover[i].b_state = false;
+      hover[i].toggled_r = 0u;
+      hover[i].toggled_g = 125u;
+      hover[i].toggled_b = 125u;
+    }
+}
+
+static void
 origin (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 {
   origin_c *origin = ptr;
@@ -81,6 +108,20 @@ origin (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       origin[i].b_is_center = false;
       origin[i].b_can_be_scaled = false;
       origin[i].b_is_screen_based = false;
+    }
+}
+
+static void
+text (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  text_c *text = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      text[i].align_h = TEXT_ALIGN_H_LEFT;
+      text[i].align_v = TEXT_ALIGN_V_TOP;
+      text[i].font_size = 5u;
+      text[i].b_is_shown = true;
+      text[i].b_uses_color = false;
     }
 }
 
@@ -166,11 +207,74 @@ static void
 system_color_set (ecs_iter_t *it)
 {
   color_c *color = ecs_field (it, color_c, 0);
+  Sint8 hover_id = 1;
+  hover_c *hover = NULL;
+  if (ecs_field_is_set (it, hover_id) == true)
+    {
+      hover = ecs_field (it, hover_c, hover_id);
+    }
   for (Sint32 i = 0; i < it->count; i++)
     {
+      if (hover != NULL && &hover[i] != NULL)
+        {
+          if(hover[i].b_state == true)
+            {
+              color[i].r = hover[i].toggled_r;
+              color[i].g = hover[i].toggled_g;
+              color[i].b = hover[i].toggled_b;
+              continue;
+            }
+        }
       color[i].r = color[i].default_r;
       color[i].g = color[i].default_g;
       color[i].b = color[i].default_b;
+    }
+}
+
+static void
+system_hover_toggle (ecs_iter_t *it)
+{
+  hover_c *hover = ecs_field (it, hover_c, 0);
+
+  origin_c *origin = ecs_field (it, origin_c, 1);
+  bounds_c *bounds = ecs_field (it, bounds_c, 2);
+
+  const app_s *app = ecs_singleton_get (it->world, app_s);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      SDL_FRect dest = (SDL_FRect){ .x = origin[i].world.x,
+                                    .y = origin[i].world.y,
+                                    .w = bounds[i].size.x,
+                                    .h = bounds[i].size.y };
+      SDL_FPoint mouse_position = app->input_man->mouse.position.window;
+      if (origin[i].b_can_be_scaled == true)
+        {
+          dest.x *= app->scale;
+          dest.y *= app->scale;
+        }
+      if (bounds[i].b_can_be_scaled == true)
+        {
+          dest.w *= app->scale;
+          dest.h *= app->scale;
+        }
+      if (origin[i].b_is_center == true)
+        {
+          dest.x -= dest.w / 2;
+          dest.y -= dest.h / 2;
+        }
+      SDL_FRect collider = (SDL_FRect){
+        .x = dest.x, .y = dest.y, .w = dest.x + dest.w, .h = dest.y + dest.h
+      };
+
+      hover[i].b_state = false;
+
+      if ((mouse_position.x >= collider.x && mouse_position.x <= collider.w)
+          && (mouse_position.y >= collider.y
+              && mouse_position.y <= collider.h))
+        {
+          hover[i].b_state = true;
+        }
     }
 }
 
@@ -294,10 +398,24 @@ init_pluto_systems (ecs_world_t *ecs)
   }
   {
     ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_hover_toggle",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (hover_c) },
+                                          { .id = ecs_id (origin_c) },
+                                          { .id = ecs_id (bounds_c) } } };
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = system_hover_toggle });
+  }
+  {
+    ecs_entity_t ent
         = ecs_entity (ecs, { .name = "system_color_set",
                              .add = ecs_ids (ecs_dependson (
                                  ecs_lookup (ecs, "pre_render_phase"))) });
-    ecs_query_desc_t query = { .terms = { { .id = ecs_id (color_c) } } };
+    ecs_query_desc_t query
+        = { .terms = { { .id = ecs_id (color_c) },
+                       { .id = ecs_id (hover_c), .oper = EcsOptional } } };
     ecs_system (
         ecs, { .entity = ent, .query = query, .callback = system_color_set });
   }
@@ -368,11 +486,20 @@ init_pluto_hooks (ecs_world_t *ecs)
   ecs_type_hooks_t box_hooks = { .ctor = box };
   ecs_set_hooks_id (ecs, ecs_id (box_c), &box_hooks);
 
+  ecs_type_hooks_t click_hooks = { .ctor = click };
+  ecs_set_hooks_id (ecs, ecs_id (click_c), &click_hooks);
+
   ecs_type_hooks_t color_hooks = { .ctor = color };
   ecs_set_hooks_id (ecs, ecs_id (color_c), &color_hooks);
 
+  ecs_type_hooks_t hover_hooks = { .ctor = hover };
+  ecs_set_hooks_id (ecs, ecs_id (hover_c), &hover_hooks);
+
   ecs_type_hooks_t origin_hooks = { .ctor = origin };
   ecs_set_hooks_id (ecs, ecs_id (origin_c), &origin_hooks);
+
+  ecs_type_hooks_t text_hooks = { .ctor = text };
+  ecs_set_hooks_id (ecs, ecs_id (text_c), &text_hooks);
 }
 
 static app_s *
@@ -404,7 +531,6 @@ init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
 
   text_man_create_font_book (&app->text_man, app->rend);
 
-
   struct input_man_callbacks callbacks
       = { .key_press_callback = handle_key_press,
           .key_release_callback = handle_key_release,
@@ -425,7 +551,9 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, alpha_c);
   ECS_COMPONENT_DEFINE (ecs, bounds_c);
   ECS_COMPONENT_DEFINE (ecs, box_c);
+  ECS_COMPONENT_DEFINE (ecs, click_c);
   ECS_COMPONENT_DEFINE (ecs, color_c);
+  ECS_COMPONENT_DEFINE (ecs, hover_c);
   ECS_COMPONENT_DEFINE (ecs, origin_c);
   ECS_COMPONENT_DEFINE (ecs, text_c);
   app_s *app = init_pluto_sdl (ecs, window_size);
