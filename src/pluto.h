@@ -4,9 +4,21 @@
 #include "SDL3/SDL.h"
 #include "flecs.h"
 
+#include "game_modules/animation.h"
 #include "game_modules/render_target.h"
 
-typedef struct singleton_app
+#define SPRITE_RENDER_TYPE_DEFAULT 0
+#define SPRITE_RENDER_TYPE_ANIMATED 1
+#define SPRITE_RENDER_TYPE_NGRID 2
+#define SPRITE_RENDER_TYPE_TILED 3
+#define SPRITE_RENDER_TYPE_TARGET 4
+#define SPRITE_RENDER_TYPE_MAX 5
+
+/******************************/
+/******** Components **********/
+/******************************/
+
+typedef struct singleton_core
 {
   SDL_Window *win;
   SDL_Point window_size;
@@ -22,12 +34,22 @@ typedef struct singleton_app
   ecs_entity_t current_scene;
   dict_render_target_t rts;
   float scale;
-} app_s;
+} core_s;
 
 typedef struct component_alpha
 {
   Uint8 value;
 } alpha_c;
+
+typedef struct component_anim_player
+{
+  dict_string_anim_pose_t poses;
+  Uint8 current_tick;
+  char *control_pose;
+  Sint32 control_direction;
+  SDL_Point current_frame;
+  SDL_FRect subsection;
+} anim_player_c;
 
 typedef struct component_bounds
 {
@@ -75,11 +97,25 @@ typedef struct component_origin
 {
   SDL_FPoint world;
   SDL_FPoint relative;
-  void (*position_callback) (ecs_world_t *, SDL_FPoint *);
+  SDL_FPoint (*relative_callback) (ecs_world_t *);
   bool b_is_center;
   bool b_can_be_scaled;
   bool b_is_screen_based;
 } origin_c;
+
+typedef struct component_sprite
+{
+  string_t name;
+  Sint32 render_type;
+  SDL_FPoint offset;
+  bool b_is_shown;
+  bool b_uses_color;
+  bool b_overrides_bounds;
+  SDL_FPoint over_size;
+  bool b_should_cache;
+  bool b_should_regenerate;
+  string_t cache_name;
+} sprite_c;
 
 typedef struct component_text
 {
@@ -91,8 +127,17 @@ typedef struct component_text
   bool b_uses_color;
 } text_c;
 
-app_s *init_pluto (ecs_world_t *ecs, SDL_Point window_size);
+/******************************/
+/********* Core API ***********/
+/******************************/
 
+/* Call this at the start of your application. It deals with SDL and other
+ * required constructs and returns a pointer to an ecs singleton containing
+ * the core framework functionality. */
+core_s *init_pluto (ecs_world_t *ecs, SDL_Point window_size);
+
+/* Implement these callbacks in your application. Only mouse and keyboard are
+ * supported for now.*/
 extern void handle_key_press (struct input_man *input_man, SDL_Scancode key,
                               void *param);
 extern void handle_key_release (struct input_man *input_man, SDL_Scancode key,
@@ -107,5 +152,7 @@ extern void handle_mouse_hold (struct input_man *input_man, SDL_FPoint pos,
                                Uint8 button, void *param);
 extern void handle_mouse_motion (struct input_man *input_man, SDL_FPoint pos,
                                  SDL_FPoint rel, void *param);
+
+SDL_FPoint get_mouse_position (ecs_world_t *appstate);
 
 #endif /* PLUTO_MODULE_H */
