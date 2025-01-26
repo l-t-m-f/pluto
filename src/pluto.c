@@ -16,6 +16,7 @@ ECS_COMPONENT_DECLARE (bounds_c);
 ECS_COMPONENT_DECLARE (box_c);
 ECS_COMPONENT_DECLARE (click_c);
 ECS_COMPONENT_DECLARE (color_c);
+ECS_COMPONENT_DECLARE (drag_c);
 ECS_COMPONENT_DECLARE (hover_c);
 ECS_COMPONENT_DECLARE (origin_c);
 ECS_COMPONENT_DECLARE (sprite_c);
@@ -100,6 +101,18 @@ color (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       color[i].g = color[i].default_g;
       color[i].b = color[i].default_b;
       color[i].b_should_reset = true;
+    }
+}
+
+static void
+drag (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  drag_c *drag = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      drag[i].toggled_r = 0u;
+      drag[i].toggled_g = 255u;
+      drag[i].toggled_b = 0u;
     }
 }
 
@@ -406,6 +419,36 @@ system_color_set (ecs_iter_t *it)
       color[i].r = color[i].default_r;
       color[i].g = color[i].default_g;
       color[i].b = color[i].default_b;
+    }
+}
+
+void
+system_drag_apply_delta (ecs_iter_t *it)
+{
+  drag_c *drag = ecs_field (it, drag_c, 0);
+
+  origin_c *origin = ecs_field (it, origin_c, 1);
+  click_c *click = ecs_field (it, click_c, 2);
+
+  const core_s *core = ecs_singleton_get (it->world, core_s);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      SDL_FPoint delta = core->input_man->mouse.motion;
+      if (origin[i].b_can_be_scaled == true)
+        {
+          delta.x *= core->scale;
+          delta.y *= core->scale;
+        }
+      if (click[i].b_state == true)
+        {
+          drag[i].b_state = true;
+
+          origin[i].relative.x += delta.x;
+          origin[i].relative.y += delta.y;
+          log_debug (0, "%.1f, %.1f", origin[i].relative.x,
+                     origin[i].relative.y);
+        }
     }
 }
 
@@ -740,6 +783,17 @@ init_pluto_systems (ecs_world_t *ecs)
                        .callback = system_origin_bind_relative });
   }
   {
+    ecs_entity_t ent = ecs_entity (ecs, {
+                                            .name = "system_drag_apply_delta",
+                                        });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (drag_c) },
+                                          { .id = ecs_id (origin_c) },
+                                          { .id = ecs_id (click_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_drag_apply_delta });
+  }
+  {
     ecs_entity_t ent
         = ecs_entity (ecs, { .name = "system_origin_calc_world",
                              .add = ecs_ids (ecs_dependson (
@@ -880,6 +934,9 @@ init_pluto_hooks (ecs_world_t *ecs)
   ecs_type_hooks_t color_hooks = { .ctor = color };
   ecs_set_hooks_id (ecs, ecs_id (color_c), &color_hooks);
 
+  ecs_type_hooks_t drag_hooks = { .ctor = drag };
+  ecs_set_hooks_id (ecs, ecs_id (drag_c), &drag_hooks);
+
   ecs_type_hooks_t hover_hooks = { .ctor = hover };
   ecs_set_hooks_id (ecs, ecs_id (hover_c), &hover_hooks);
 
@@ -950,6 +1007,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, box_c);
   ECS_COMPONENT_DEFINE (ecs, click_c);
   ECS_COMPONENT_DEFINE (ecs, color_c);
+  ECS_COMPONENT_DEFINE (ecs, drag_c);
   ECS_COMPONENT_DEFINE (ecs, hover_c);
   ECS_COMPONENT_DEFINE (ecs, origin_c);
   ECS_COMPONENT_DEFINE (ecs, sprite_c);

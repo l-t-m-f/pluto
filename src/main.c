@@ -40,6 +40,7 @@ void
 handle_mouse_motion (struct input_man *input_man, SDL_FPoint pos,
                      SDL_FPoint rel, void *param)
 {
+  ecs_run (param, ecs_lookup (param, "system_drag_apply_delta"), 0.f, NULL);
 }
 
 int
@@ -53,6 +54,7 @@ main (int argc, char *argv[])
   ECS_COMPONENT (ecs, box_c);
   ECS_COMPONENT (ecs, click_c);
   ECS_COMPONENT (ecs, color_c);
+  ECS_COMPONENT (ecs, drag_c);
   ECS_COMPONENT (ecs, hover_c);
   ECS_COMPONENT (ecs, origin_c);
   ECS_COMPONENT (ecs, sprite_c);
@@ -105,6 +107,7 @@ main (int argc, char *argv[])
     color->default_r = 255u;
     color->default_g = 0u;
     color->default_b = 0u;
+    ecs_add (ecs, ent, drag_c);
     ecs_add (ecs, ent, hover_c);
     origin_c *origin = ecs_ensure (ecs, ent, origin_c);
     origin->relative = (SDL_FPoint){ 60.f, 60.f };

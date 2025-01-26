@@ -85,6 +85,14 @@ typedef struct component_color
   bool b_should_reset;
 } color_c;
 
+typedef struct component_drag
+{
+  bool b_state;
+  Uint8 toggled_r;
+  Uint8 toggled_g;
+  Uint8 toggled_b;
+} drag_c;
+
 typedef struct component_hover
 {
   bool b_state;
