@@ -205,7 +205,6 @@ typedef struct component_ngrid
 typedef struct component_sprite
 {
   string_t name;
-  Sint32 render_type;
   SDL_FPoint offset;
   bool b_is_shown;
   bool b_uses_color;

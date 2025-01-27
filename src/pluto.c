@@ -270,7 +270,6 @@ sprite (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
     {
       sprite[i].b_is_shown = true;
       sprite[i].b_uses_color = false;
-      sprite[i].render_type = SPRITE_RENDER_TYPE_DEFAULT;
       sprite[i].offset = (SDL_FPoint){ 0.f, 0.f };
       sprite[i].b_overrides_bounds = false;
       sprite[i].over_size = (SDL_FPoint){ 0.f, 0.f };
@@ -1137,6 +1136,114 @@ system_origin_calc_world (ecs_iter_t *it)
 }
 
 static void
+system_pattern_draw (ecs_iter_t *it)
+{
+  pattern_c *pattern = ecs_field (it, pattern_c, 0);
+
+  bounds_c *bounds = ecs_field (it, bounds_c, 1);
+  origin_c *origin = ecs_field (it, origin_c, 2);
+  Sint8 alpha_id = 3;
+  alpha_c *alpha_opt = NULL;
+  if (ecs_field_is_set (it, alpha_id) == true)
+    {
+      alpha_opt = ecs_field (it, alpha_c, alpha_id);
+    }
+  Sint8 color_id = 4;
+  color_c *color_opt = NULL;
+  if (ecs_field_is_set (it, color_id) == true)
+    {
+      color_opt = ecs_field (it, color_c, color_id);
+    }
+  Sint8 anim_player_id = 5;
+  anim_player_c *anim_player_opt = NULL;
+  if (ecs_field_is_set (it, anim_player_id) == true)
+    {
+      anim_player_opt = ecs_field (it, anim_player_c, anim_player_id);
+    }
+  Sint8 cache_id = 6;
+  cache_c *cache_opt = NULL;
+  if (ecs_field_is_set (it, cache_id) == true)
+    {
+      cache_opt = ecs_field (it, cache_c, cache_id);
+    }
+
+  core_s *core = ecs_get_mut (it->world, ecs_id (core_s), core_s);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (pattern[i].b_is_shown == false)
+        {
+          continue;
+        }
+      SDL_FRect dest = { .x = origin[i].world.x, .y = origin[i].world.y };
+
+      if (origin[i].b_can_be_scaled == true)
+        {
+          dest.x *= core->scale;
+          dest.y *= core->scale;
+        }
+
+      dest.w = bounds[i].size.x;
+      dest.h = bounds[i].size.y;
+
+      if (bounds[i].b_can_be_scaled == true)
+        {
+          dest.w *= core->scale;
+          dest.h *= core->scale;
+        }
+      if (origin[i].b_is_center == true)
+        {
+          dest.x -= dest.w / 2;
+          dest.y -= dest.h / 2;
+        }
+      Uint8 pattern_r = 255u;
+      Uint8 pattern_g = 255u;
+      Uint8 pattern_b = 255u;
+      Uint8 pattern_a = 255u;
+      if (pattern[i].b_uses_color == true)
+        {
+          if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+            {
+              pattern_a = alpha_opt[i].value;
+            }
+          if (color_opt != NULL && &color_opt[i] != NULL)
+            {
+              pattern_r = color_opt[i].r;
+              pattern_g = color_opt[i].g;
+              pattern_b = color_opt[i].b;
+            }
+        }
+
+      /* Enable a render target if needs be. */
+
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
+        {
+          if (cache_opt[i].b_should_regenerate == false)
+            {
+              continue;
+            }
+          render_target_switch (core->rend, core->rts,
+                                cache_opt[i].cache_name);
+          cache_opt[i].b_should_regenerate = false;
+        }
+
+      struct satlas_render_color_params params = { .opacity = pattern_a,
+                                                   .tint_r = pattern_r,
+                                                   .tint_g = pattern_g,
+                                                   .tint_b = pattern_b };
+
+      satlas_render_entry_tiled (core->atlas,
+                                 pattern[i].name, &dest, core->scale,
+                                 &params);
+
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
+        {
+          render_target_switch (core->rend, core->rts, STRING_CTE (""));
+        }
+    }
+}
+
+static void
 system_sprite_draw (ecs_iter_t *it)
 {
   sprite_c *sprite = ecs_field (it, sprite_c, 0);
@@ -1249,34 +1356,16 @@ system_sprite_draw (ecs_iter_t *it)
                                                    .tint_r = sprite_r,
                                                    .tint_g = sprite_g,
                                                    .tint_b = sprite_b };
-      switch (sprite[i].render_type)
+
+      if (anim_player_opt != NULL && &anim_player_opt[i] != NULL)
         {
-        case SPRITE_RENDER_TYPE_DEFAULT:
-          {
-            satlas_render_entry (core->atlas, sprite[i].name, &dest, &params);
-            break;
-          }
-        case SPRITE_RENDER_TYPE_ANIMATED:
-          {
-            if (anim_player_opt != NULL && &anim_player_opt[i] != NULL)
-              {
-                satlas_render_entry_subsection (core->atlas, sprite[i].name,
-                                                &anim_player_opt[i].subsection,
-                                                &dest, &params);
-              }
-            break;
-          }
-        case SPRITE_RENDER_TYPE_TARGET:
-          {
-            struct render_target *rt
-                = *dict_render_target_get (core->rts, sprite[i].name);
-            SDL_RenderTexture (core->rend, rt->texture, NULL, &dest);
-            break;
-          }
-        default:
-          {
-            break;
-          }
+          satlas_render_entry_subsection (core->atlas, sprite[i].name,
+                                          &anim_player_opt[i].subsection,
+                                          &dest, &params);
+        }
+      else
+        {
+          satlas_render_entry (core->atlas, sprite[i].name, &dest, &params);
         }
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
@@ -1534,8 +1623,23 @@ init_pluto_systems (ecs_world_t *ecs)
                        { .id = ecs_id (anim_player_c), .oper = EcsOptional },
                        { .id = ecs_id (cache_c), .oper = EcsOptional } } };
     ecs_system (
+        ecs, { .entity = ent, .query = query, .callback = system_ngrid_draw });
+  }
+  {
+    ecs_entity_t ent = ecs_entity (
         ecs,
-        { .entity = ent, .query = query, .callback = system_ngrid_draw });
+        { .name = "system_pattern_draw",
+          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
+    ecs_query_desc_t query
+        = { .terms = { { .id = ecs_id (pattern_c) },
+                       { .id = ecs_id (bounds_c) },
+                       { .id = ecs_id (origin_c) },
+                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+                       { .id = ecs_id (color_c), .oper = EcsOptional },
+                       { .id = ecs_id (anim_player_c), .oper = EcsOptional },
+                       { .id = ecs_id (cache_c), .oper = EcsOptional } } };
+    ecs_system (
+        ecs, { .entity = ent, .query = query, .callback = system_pattern_draw });
   }
   {
     ecs_entity_t ent = ecs_entity (

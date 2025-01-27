@@ -70,6 +70,7 @@ main (int argc, char *argv[])
   ECS_COMPONENT (ecs, ngrid_c);
   ECS_COMPONENT (ecs, origin_c);
   ECS_COMPONENT (ecs, resize_c);
+  ECS_COMPONENT (ecs, pattern_c);
   ECS_COMPONENT (ecs, sprite_c);
   ECS_COMPONENT (ecs, text_c);
 
@@ -161,7 +162,6 @@ main (int argc, char *argv[])
     origin->b_can_be_scaled = false;
     origin->b_is_center = false;
     sprite_c *sprite = ecs_ensure (ecs, ent, sprite_c);
-    sprite->render_type = SPRITE_RENDER_TYPE_DEFAULT;
     sprite->b_uses_color = false;
     string_init_set_str (sprite->name, "T_Cursor.png");
   }
@@ -202,7 +202,6 @@ main (int argc, char *argv[])
     origin->b_can_be_scaled = false;
     origin->b_is_center = false;
     sprite_c *sprite = ecs_ensure (ecs, ent, sprite_c);
-    sprite->render_type = SPRITE_RENDER_TYPE_ANIMATED;
     sprite->b_uses_color = false;
   }
 
@@ -232,6 +231,38 @@ main (int argc, char *argv[])
     };
     ngrid_c *ngrid = ecs_ensure (ecs, ent, ngrid_c);
     string_init_set_str (ngrid->name, "T_Ngrid.png");
+  }
+
+
+  /* Child box test */
+  {
+    ecs_entity_t ent = ecs_entity (ecs, { .name = "box3" });
+    alpha_c *alpha = ecs_ensure (ecs, ent, alpha_c);
+    alpha->value = 255u;
+    bounds_c *bounds = ecs_ensure (ecs, ent, bounds_c);
+    bounds->size = (SDL_FPoint){ 115.f, 145.f };
+    bounds->b_can_be_scaled = true;
+    box_c *box = ecs_ensure (ecs, ent, box_c);
+    box->b_uses_color = true;
+    box->b_is_shown = true;
+    box->b_is_filled = true;
+    click_c *click = ecs_ensure (ecs, ent, click_c);
+    click->toggled_r = 255u;
+    click->toggled_g = 255u;
+    click->toggled_b = 0u;
+    color_c *color = ecs_ensure (ecs, ent, color_c);
+    color->default_r = 255u;
+    color->default_g = 0u;
+    color->default_b = 0u;
+    ecs_add (ecs, ent, drag_c);
+    ecs_add (ecs, ent, hover_c);
+    origin_c *origin = ecs_ensure (ecs, ent, origin_c);
+    origin->relative = (SDL_FPoint){ 280.f, 80.f };
+    origin->b_can_be_scaled = true;
+    origin->b_is_center = false;
+    pattern_c *pattern = ecs_ensure(ecs, ent, pattern_c);
+    string_init_set_str(pattern->name, "T_Pattern.png");
+    ecs_add_pair (ecs, ent, EcsChildOf, ecs_lookup (ecs, "box1"));
   }
 
   SDL_Event e;
