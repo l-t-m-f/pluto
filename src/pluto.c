@@ -314,6 +314,17 @@ get_mouse_position (ecs_world_t *corestate)
 }
 
 /******************************/
+/*********** Tasks ************/
+/******************************/
+
+static void
+task_get_window_size (ecs_iter_t *it)
+{
+  core_s *core = ecs_field (it, core_s, 0);
+  SDL_GetWindowSize (core->win, &core->window_size.x, &core->window_size.y);
+}
+
+/******************************/
 /********** Systems ***********/
 /******************************/
 
@@ -1510,16 +1521,6 @@ system_text_draw (ecs_iter_t *it)
 
   for (Sint32 i = 0; i < it->count; i++)
     {
-      if (ecs_has_pair (it->world, it->entities[i],
-                        ecs_lookup (it->world, "scene"), EcsAny)
-              == true
-          && ecs_has_pair (it->world, it->entities[i],
-                           ecs_lookup (it->world, "scene"),
-                           core->current_scene)
-                 == false)
-        {
-          continue;
-        }
       if (text[i].b_is_shown == false)
         {
           continue;
@@ -1563,6 +1564,22 @@ system_text_draw (ecs_iter_t *it)
 /******************************/
 /*********** Init *************/
 /******************************/
+
+static void
+init_pluto_tasks (ecs_world_t *ecs)
+{
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "task_get_window_size",
+                             .add = ecs_ids (ecs_dependson (EcsOnUpdate)) });
+    ecs_query_desc_t query
+        = { .terms
+            = { { .id = ecs_id (core_s), .src.id = ecs_id (core_s) } } };
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = task_get_window_size });
+  }
+}
 
 static void
 init_pluto_systems (ecs_world_t *ecs)
@@ -1796,9 +1813,9 @@ init_pluto_systems (ecs_world_t *ecs)
                        { .id = ecs_id (alpha_c), .oper = EcsOptional },
                        { .id = ecs_id (color_c), .oper = EcsOptional },
                        { .id = ecs_id (cache_c), .oper = EcsOptional } } };
-    ecs_system (
-        ecs,
-        { .entity = ent, .query = query, .callback = system_render_target_draw });
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_render_target_draw });
   }
 }
 
@@ -1974,6 +1991,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   core_s *core = init_pluto_sdl (ecs, window_size);
   init_pluto_hooks (ecs);
   init_pluto_phases (ecs);
+  init_pluto_tasks (ecs);
   init_pluto_systems (ecs);
   return core;
 }

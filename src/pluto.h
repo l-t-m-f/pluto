@@ -47,16 +47,13 @@ typedef struct singleton_core
 {
   SDL_Window *win;
   SDL_Point window_size;
-  SDL_Point window_cell_dims;
   bool b_is_fullscreen_presentation;
   SDL_Renderer *rend;
-  struct game *game;
   struct screen *screen;
   struct frame_data *frame_data;
   struct sprite_atlas *atlas;
   struct text_man *text_man;
   struct input_man *input_man;
-  ecs_entity_t current_scene;
   dict_render_target_t rts;
   float scale;
 } core_s;
