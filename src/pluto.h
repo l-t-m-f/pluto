@@ -33,6 +33,14 @@ struct margins
   float right;
 };
 
+struct custom_input_data
+{
+  bool b_is_dragging_widget;
+  bool b_is_resizing_widget;
+  bool b_is_moving_camera;
+  bool b_block_movement_hold;
+};
+
 /******************************/
 /******** Components **********/
 /******************************/

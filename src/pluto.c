@@ -395,11 +395,16 @@ system_box_draw (ecs_iter_t *it)
 static void
 system_click_toggle (ecs_iter_t *it)
 {
+  const core_s *core = ecs_singleton_get (it->world, core_s);
+  struct custom_input_data *custom_data = core->input_man->custom_data;
+  if (custom_data->b_is_dragging_widget == true
+      || custom_data->b_is_resizing_widget == true)
+    {
+      return;
+    }
   click_c *click = ecs_field (it, click_c, 0);
 
   hover_c *hover = ecs_field (it, hover_c, 1);
-
-  const core_s *core = ecs_singleton_get (it->world, core_s);
 
   for (Sint32 i = 0; i < it->count; i++)
     {
@@ -463,15 +468,23 @@ system_color_set (ecs_iter_t *it)
 void
 system_drag_apply_delta (ecs_iter_t *it)
 {
+  const core_s *core = ecs_singleton_get (it->world, core_s);
+  struct custom_input_data *custom_data = core->input_man->custom_data;
+  if (custom_data->b_is_resizing_widget == true)
+    {
+      return;
+    }
   drag_c *drag = ecs_field (it, drag_c, 0);
 
   origin_c *origin = ecs_field (it, origin_c, 1);
   click_c *click = ecs_field (it, click_c, 2);
 
-  const core_s *core = ecs_singleton_get (it->world, core_s);
-
   for (Sint32 i = 0; i < it->count; i++)
     {
+
+      ((struct custom_input_data *)core->input_man->custom_data)
+          ->b_is_dragging_widget
+          = false;
       SDL_FPoint delta = core->input_man->mouse.motion;
       if (origin[i].b_can_be_scaled == true)
         {
@@ -484,8 +497,10 @@ system_drag_apply_delta (ecs_iter_t *it)
 
           origin[i].relative.x += delta.x;
           origin[i].relative.y += delta.y;
-          log_debug (0, "%.1f, %.1f", origin[i].relative.x,
-                     origin[i].relative.y);
+
+          ((struct custom_input_data *)core->input_man->custom_data)
+              ->b_is_dragging_widget
+              = true;
         }
     }
 }
@@ -795,7 +810,12 @@ system_origin_bind_relative (ecs_iter_t *it)
 void
 system_resize_apply_delta (ecs_iter_t *it)
 {
-
+  const core_s *core = ecs_singleton_get (it->world, core_s);
+  struct custom_input_data *custom_data = core->input_man->custom_data;
+  if (custom_data->b_is_dragging_widget == true)
+    {
+      return;
+    }
   resize_c *resize = ecs_field (it, resize_c, 0);
 
   margins_c *margins = ecs_field (it, margins_c, 1);
@@ -803,10 +823,12 @@ system_resize_apply_delta (ecs_iter_t *it)
   bounds_c *bounds = ecs_field (it, bounds_c, 3);
   click_c *click = ecs_field (it, click_c, 4);
 
-  const core_s *core = ecs_singleton_get (it->world, core_s);
-
   for (Sint32 i = 0; i < it->count; i++)
     {
+      ((struct custom_input_data *)core->input_man->custom_data)
+          ->b_is_resizing_widget
+          = false;
+      resize[i].b_state = false;
       if (click[i].b_state == false)
         {
           continue;
@@ -827,6 +849,10 @@ system_resize_apply_delta (ecs_iter_t *it)
           origin[i].relative.y += delta.y;
           bounds[i].size.y -= delta.y;
           resize[i].b_state = true;
+
+          ((struct custom_input_data *)core->input_man->custom_data)
+              ->b_is_resizing_widget
+              = true;
         }
       else if (resize[i].from[MARGIN_HANDLE_TOP_EDGE] == true
                && margins[i].current_handle == MARGIN_HANDLE_TOP_EDGE)
@@ -834,6 +860,10 @@ system_resize_apply_delta (ecs_iter_t *it)
           origin[i].relative.y += delta.y;
           bounds[i].size.y -= delta.y;
           resize[i].b_state = true;
+
+          ((struct custom_input_data *)core->input_man->custom_data)
+              ->b_is_resizing_widget
+              = true;
         }
       else if (resize[i].from[MARGIN_HANDLE_TOP_LEFT_CORNER] == true
                && margins[i].current_handle == MARGIN_HANDLE_TOP_LEFT_CORNER)
@@ -843,6 +873,10 @@ system_resize_apply_delta (ecs_iter_t *it)
           origin[i].relative.y += delta.y;
           bounds[i].size.y -= delta.y;
           resize[i].b_state = true;
+
+          ((struct custom_input_data *)core->input_man->custom_data)
+              ->b_is_resizing_widget
+              = true;
         }
       else if (resize[i].from[MARGIN_HANDLE_LEFT_EDGE] == true
                && margins[i].current_handle == MARGIN_HANDLE_LEFT_EDGE)
@@ -850,6 +884,10 @@ system_resize_apply_delta (ecs_iter_t *it)
           origin[i].relative.x += delta.x;
           bounds[i].size.x -= delta.x;
           resize[i].b_state = true;
+
+          ((struct custom_input_data *)core->input_man->custom_data)
+              ->b_is_resizing_widget
+              = true;
         }
       else if (resize[i].from[MARGIN_HANDLE_BOT_LEFT_CORNER] == true
                && margins[i].current_handle == MARGIN_HANDLE_BOT_LEFT_CORNER)
@@ -858,12 +896,20 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.x -= delta.x;
           bounds[i].size.y += delta.y;
           resize[i].b_state = true;
+
+          ((struct custom_input_data *)core->input_man->custom_data)
+              ->b_is_resizing_widget
+              = true;
         }
       else if (resize[i].from[MARGIN_HANDLE_BOT_EDGE] == true
                && margins[i].current_handle == MARGIN_HANDLE_BOT_EDGE)
         {
           bounds[i].size.y += delta.y;
           resize[i].b_state = true;
+
+          ((struct custom_input_data *)core->input_man->custom_data)
+              ->b_is_resizing_widget
+              = true;
         }
       else if (resize[i].from[MARGIN_HANDLE_BOT_RIGHT_CORNER] == true
                && margins[i].current_handle == MARGIN_HANDLE_BOT_RIGHT_CORNER)
@@ -871,12 +917,20 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.x += delta.x;
           bounds[i].size.y += delta.y;
           resize[i].b_state = true;
+
+          ((struct custom_input_data *)core->input_man->custom_data)
+              ->b_is_resizing_widget
+              = true;
         }
       else if (resize[i].from[MARGIN_HANDLE_RIGHT_EDGE] == true
                && margins[i].current_handle == MARGIN_HANDLE_RIGHT_EDGE)
         {
           bounds[i].size.x += delta.x;
           resize[i].b_state = true;
+
+          ((struct custom_input_data *)core->input_man->custom_data)
+              ->b_is_resizing_widget
+              = true;
         }
     }
 }
@@ -1403,7 +1457,11 @@ init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
           .mouse_release_callback = handle_mouse_release,
           .mouse_hold_callback = handle_mouse_hold,
           .mouse_motion_callback = handle_mouse_motion };
-  input_man_init (&core->input_man, &callbacks);
+  struct custom_input_data *custom_data
+      = SDL_malloc (sizeof (struct custom_input_data));
+  custom_data->b_is_resizing_widget = false;
+  custom_data->b_is_dragging_widget = false;
+  input_man_init (&core->input_man, &callbacks, custom_data);
 
   return core;
 }

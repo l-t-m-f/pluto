@@ -31,6 +31,9 @@ void
 handle_mouse_release (struct input_man *input_man, SDL_FPoint pos,
                       Uint8 button, void *param)
 {
+  struct custom_input_data *custom_data = input_man->custom_data;
+  custom_data->b_is_resizing_widget = false;
+  custom_data->b_is_dragging_widget = false;
   ecs_run (param, ecs_lookup (param, "system_margins_check_handles"), 0.f, NULL);
 }
 void
@@ -79,6 +82,7 @@ main (int argc, char *argv[])
     click->toggled_r = 255u;
     click->toggled_g = 255u;
     click->toggled_b = 0u;
+    ecs_add(ecs, ent, drag_c);
     color_c *color = ecs_ensure (ecs, ent, color_c);
     color->default_r = 0u;
     color->default_g = 0u;
