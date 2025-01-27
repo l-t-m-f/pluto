@@ -212,6 +212,13 @@ typedef struct component_sprite
   SDL_FPoint over_size;
 } sprite_c;
 
+typedef struct component_render_target
+{
+  string_t name;
+  bool b_is_shown;
+  bool b_uses_color;
+} render_target_c;
+
 typedef struct component_text
 {
   string_t content;

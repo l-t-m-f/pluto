@@ -27,6 +27,7 @@ ECS_COMPONENT_DECLARE (margins_c);
 ECS_COMPONENT_DECLARE (ngrid_c);
 ECS_COMPONENT_DECLARE (origin_c);
 ECS_COMPONENT_DECLARE (pattern_c);
+ECS_COMPONENT_DECLARE (render_target_c);
 ECS_COMPONENT_DECLARE (resize_c);
 ECS_COMPONENT_DECLARE (sprite_c);
 ECS_COMPONENT_DECLARE (text_c);
@@ -244,6 +245,17 @@ pattern (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
     {
       pattern[i].b_is_shown = true;
       pattern[i].b_uses_color = false;
+    }
+}
+
+void
+render_target (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  render_target_c *render_target = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      render_target[i].b_is_shown = true;
+      render_target[i].b_uses_color = false;
     }
 }
 
@@ -1232,9 +1244,109 @@ system_pattern_draw (ecs_iter_t *it)
                                                    .tint_g = pattern_g,
                                                    .tint_b = pattern_b };
 
-      satlas_render_entry_tiled (core->atlas,
-                                 pattern[i].name, &dest, core->scale,
-                                 &params);
+      satlas_render_entry_tiled (core->atlas, pattern[i].name, &dest,
+                                 core->scale, &params);
+
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
+        {
+          render_target_switch (core->rend, core->rts, STRING_CTE (""));
+        }
+    }
+}
+
+static void
+system_render_target_draw (ecs_iter_t *it)
+{
+  render_target_c *render_target = ecs_field (it, render_target_c, 0);
+
+  bounds_c *bounds = ecs_field (it, bounds_c, 1);
+  origin_c *origin = ecs_field (it, origin_c, 2);
+  Sint8 alpha_id = 3;
+  alpha_c *alpha_opt = NULL;
+  if (ecs_field_is_set (it, alpha_id) == true)
+    {
+      alpha_opt = ecs_field (it, alpha_c, alpha_id);
+    }
+  Sint8 color_id = 4;
+  color_c *color_opt = NULL;
+  if (ecs_field_is_set (it, color_id) == true)
+    {
+      color_opt = ecs_field (it, color_c, color_id);
+    }
+  Sint8 cache_id = 5;
+  cache_c *cache_opt = NULL;
+  if (ecs_field_is_set (it, cache_id) == true)
+    {
+      cache_opt = ecs_field (it, cache_c, cache_id);
+    }
+
+  core_s *core = ecs_get_mut (it->world, ecs_id (core_s), core_s);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (render_target[i].b_is_shown == false)
+        {
+          continue;
+        }
+      SDL_FRect dest = { .x = origin[i].world.x, .y = origin[i].world.y };
+
+      if (origin[i].b_can_be_scaled == true)
+        {
+          dest.x *= core->scale;
+          dest.y *= core->scale;
+        }
+
+      dest.w = bounds[i].size.x;
+      dest.h = bounds[i].size.y;
+
+      if (bounds[i].b_can_be_scaled == true)
+        {
+          dest.w *= core->scale;
+          dest.h *= core->scale;
+        }
+      if (origin[i].b_is_center == true)
+        {
+          dest.x -= dest.w / 2;
+          dest.y -= dest.h / 2;
+        }
+      Uint8 rt_r = 255u;
+      Uint8 rt_g = 255u;
+      Uint8 rt_b = 255u;
+      Uint8 rt_a = 255u;
+      if (render_target[i].b_uses_color == true)
+        {
+          if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+            {
+              rt_a = alpha_opt[i].value;
+            }
+          if (color_opt != NULL && &color_opt[i] != NULL)
+            {
+              rt_r = color_opt[i].r;
+              rt_g = color_opt[i].g;
+              rt_b = color_opt[i].b;
+            }
+        }
+
+      /* Enable a render target if needs be. */
+
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
+        {
+          if (cache_opt[i].b_should_regenerate == false)
+            {
+              continue;
+            }
+          render_target_switch (core->rend, core->rts,
+                                cache_opt[i].cache_name);
+          cache_opt[i].b_should_regenerate = false;
+        }
+
+      struct satlas_render_color_params params = {
+        .opacity = rt_a, .tint_r = rt_r, .tint_g = rt_g, .tint_b = rt_b
+      };
+
+      const struct render_target *rt
+          = *dict_render_target_get (core->rts, render_target[i].name);
+      SDL_RenderTexture (core->rend, rt->texture, NULL, &dest);
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
@@ -1639,7 +1751,8 @@ init_pluto_systems (ecs_world_t *ecs)
                        { .id = ecs_id (anim_player_c), .oper = EcsOptional },
                        { .id = ecs_id (cache_c), .oper = EcsOptional } } };
     ecs_system (
-        ecs, { .entity = ent, .query = query, .callback = system_pattern_draw });
+        ecs,
+        { .entity = ent, .query = query, .callback = system_pattern_draw });
   }
   {
     ecs_entity_t ent = ecs_entity (
@@ -1670,6 +1783,22 @@ init_pluto_systems (ecs_world_t *ecs)
                        { .id = ecs_id (color_c), .oper = EcsOptional } } };
     ecs_system (
         ecs, { .entity = ent, .query = query, .callback = system_text_draw });
+  }
+  {
+    ecs_entity_t ent = ecs_entity (
+        ecs,
+        { .name = "system_render_target_draw",
+          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
+    ecs_query_desc_t query
+        = { .terms = { { .id = ecs_id (render_target_c) },
+                       { .id = ecs_id (bounds_c) },
+                       { .id = ecs_id (origin_c) },
+                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+                       { .id = ecs_id (color_c), .oper = EcsOptional },
+                       { .id = ecs_id (cache_c), .oper = EcsOptional } } };
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = system_render_target_draw });
   }
 }
 
@@ -1753,6 +1882,9 @@ init_pluto_hooks (ecs_world_t *ecs)
   ecs_type_hooks_t pattern_hooks = { .ctor = pattern };
   ecs_set_hooks_id (ecs, ecs_id (pattern_c), &pattern_hooks);
 
+  ecs_type_hooks_t render_target_hooks = { .ctor = render_target };
+  ecs_set_hooks_id (ecs, ecs_id (render_target_c), &render_target_hooks);
+
   ecs_type_hooks_t resize_hooks = { .ctor = resize };
   ecs_set_hooks_id (ecs, ecs_id (resize_c), &resize_hooks);
 
@@ -1835,6 +1967,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, ngrid_c);
   ECS_COMPONENT_DEFINE (ecs, origin_c);
   ECS_COMPONENT_DEFINE (ecs, pattern_c);
+  ECS_COMPONENT_DEFINE (ecs, render_target_c);
   ECS_COMPONENT_DEFINE (ecs, resize_c);
   ECS_COMPONENT_DEFINE (ecs, sprite_c);
   ECS_COMPONENT_DEFINE (ecs, text_c);

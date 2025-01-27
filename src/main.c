@@ -58,10 +58,15 @@ main (int argc, char *argv[])
   ecs_world_t *ecs = ecs_init ();
   core_s *core = init_pluto (ecs, (SDL_Point){ 640, 480 });
 
+  dict_render_target_init (core->rts);
+  render_target_add_to_pool (core->rend, core->rts, STRING_CTE ("RT"),
+                             (SDL_Point){ 320, 240 });
+
   ECS_COMPONENT (ecs, anim_player_c);
   ECS_COMPONENT (ecs, alpha_c);
   ECS_COMPONENT (ecs, bounds_c);
   ECS_COMPONENT (ecs, box_c);
+  ECS_COMPONENT (ecs, cache_c);
   ECS_COMPONENT (ecs, click_c);
   ECS_COMPONENT (ecs, color_c);
   ECS_COMPONENT (ecs, drag_c);
@@ -69,6 +74,7 @@ main (int argc, char *argv[])
   ECS_COMPONENT (ecs, margins_c);
   ECS_COMPONENT (ecs, ngrid_c);
   ECS_COMPONENT (ecs, origin_c);
+  ECS_COMPONENT (ecs, render_target_c);
   ECS_COMPONENT (ecs, resize_c);
   ECS_COMPONENT (ecs, pattern_c);
   ECS_COMPONENT (ecs, sprite_c);
@@ -233,7 +239,6 @@ main (int argc, char *argv[])
     string_init_set_str (ngrid->name, "T_Ngrid.png");
   }
 
-
   /* Child box test */
   {
     ecs_entity_t ent = ecs_entity (ecs, { .name = "box3" });
@@ -260,9 +265,46 @@ main (int argc, char *argv[])
     origin->relative = (SDL_FPoint){ 280.f, 80.f };
     origin->b_can_be_scaled = true;
     origin->b_is_center = false;
-    pattern_c *pattern = ecs_ensure(ecs, ent, pattern_c);
-    string_init_set_str(pattern->name, "T_Pattern.png");
+    pattern_c *pattern = ecs_ensure (ecs, ent, pattern_c);
+    string_init_set_str (pattern->name, "T_Pattern.png");
     ecs_add_pair (ecs, ent, EcsChildOf, ecs_lookup (ecs, "box1"));
+  }
+
+  /* Cached sprite test */
+  {
+    ecs_entity_t ent = ecs_entity (ecs, { .name = "cached_sprite" });
+    bounds_c *bounds = ecs_ensure (ecs, ent, bounds_c);
+    bounds->size = (SDL_FPoint){ 64.f, 64.f };
+    bounds->b_can_be_scaled = true;
+    box_c *box = ecs_ensure (ecs, ent, box_c);
+    box->b_is_shown = false;
+    box->b_is_filled = false;
+    cache_c *cache = ecs_ensure (ecs, ent, cache_c);
+    string_init_set_str (cache->cache_name, "RT");
+    cache->b_should_regenerate = true;
+    origin_c *origin = ecs_ensure (ecs, ent, origin_c);
+    origin->relative = (SDL_FPoint){ 0.f, 0.f };
+    origin->b_can_be_scaled = true;
+    origin->b_is_center = false;
+    sprite_c *sprite = ecs_ensure (ecs, ent, sprite_c);
+    string_init_set_str (sprite->name, "T_Tile.png");
+  }
+
+  /* Render_target test */
+  {
+    ecs_entity_t ent = ecs_entity (ecs, { .name = "RT" });
+    bounds_c *bounds = ecs_ensure (ecs, ent, bounds_c);
+    bounds->size = (SDL_FPoint){ 320.f, 240.f };
+    bounds->b_can_be_scaled = true;
+    box_c *box = ecs_ensure (ecs, ent, box_c);
+    box->b_is_shown = true;
+    box->b_is_filled = false;
+    origin_c *origin = ecs_ensure (ecs, ent, origin_c);
+    origin->relative = (SDL_FPoint){ 0.f, 0.f };
+    origin->b_can_be_scaled = true;
+    origin->b_is_center = false;
+    render_target_c *render_target = ecs_ensure (ecs, ent, render_target_c);
+    string_init_set_str (render_target->name, "RT");
   }
 
   SDL_Event e;
