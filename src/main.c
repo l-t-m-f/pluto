@@ -67,6 +67,7 @@ main (int argc, char *argv[])
   ECS_COMPONENT (ecs, drag_c);
   ECS_COMPONENT (ecs, hover_c);
   ECS_COMPONENT (ecs, margins_c);
+  ECS_COMPONENT (ecs, ngrid_c);
   ECS_COMPONENT (ecs, origin_c);
   ECS_COMPONENT (ecs, resize_c);
   ECS_COMPONENT (ecs, sprite_c);
@@ -93,7 +94,7 @@ main (int argc, char *argv[])
     color->default_b = 0u;
     ecs_add (ecs, ent, hover_c);
     margins_c *margins = ecs_ensure (ecs, ent, margins_c);
-    margins->value = (struct margins){
+    margins->value = (struct margins_ngrid){
       .top = 12.f, .left = 12.f, .bottom = 12.f, .right = 12.f
     };
     origin_c *origin = ecs_ensure (ecs, ent, origin_c);
@@ -203,6 +204,34 @@ main (int argc, char *argv[])
     sprite_c *sprite = ecs_ensure (ecs, ent, sprite_c);
     sprite->render_type = SPRITE_RENDER_TYPE_ANIMATED;
     sprite->b_uses_color = false;
+  }
+
+  /* Ngrid test */
+  {
+    ecs_entity_t ent = ecs_entity (ecs, { .name = "ngrid" });
+    alpha_c *alpha = ecs_ensure (ecs, ent, alpha_c);
+    alpha->value = 255u;
+    bounds_c *bounds = ecs_ensure (ecs, ent, bounds_c);
+    bounds->size = (SDL_FPoint){ 300.f, 240.f };
+    bounds->b_can_be_scaled = true;
+    box_c *box = ecs_ensure (ecs, ent, box_c);
+    box->b_uses_color = false;
+    box->b_is_shown = true;
+    box->b_is_filled = false;
+    color_c *color = ecs_ensure (ecs, ent, color_c);
+    color->default_r = 55u;
+    color->default_g = 155u;
+    color->default_b = 0u;
+    origin_c *origin = ecs_ensure (ecs, ent, origin_c);
+    origin->relative = (SDL_FPoint){ 300.f, 40.f };
+    origin->b_can_be_scaled = false;
+    origin->b_is_center = false;
+    margins_c *margins = ecs_ensure (ecs, ent, margins_c);
+    margins->value = (struct margins_ngrid){
+      .top = 70.f, .left = 70.f, .bottom = 70.f, .right = 70.f
+    };
+    ngrid_c *ngrid = ecs_ensure (ecs, ent, ngrid_c);
+    string_init_set_str (ngrid->name, "T_Ngrid.png");
   }
 
   SDL_Event e;

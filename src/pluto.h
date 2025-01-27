@@ -5,6 +5,7 @@
 #include "flecs.h"
 
 #include "game_modules/animation.h"
+#include "game_modules/sprite_atlas.h"
 #include "game_modules/render_target.h"
 
 #define MARGIN_HANDLE_NONE 0
@@ -29,14 +30,6 @@
 ARRAY_DEF(arr_entity, ecs_entity_t, M_BASIC_OPLIST)
 ARRAY_DEF(mat2d_entity, arr_entity_t, M_ARRAY_OPLIST(arr_entity))
 ARRAY_DEF(mat3d_entity, mat2d_entity_t, M_ARRAY_OPLIST(mat2d_entity))
-
-struct margins
-{
-  float top;
-  float left;
-  float bottom;
-  float right;
-};
 
 struct custom_input_data
 {
@@ -157,7 +150,7 @@ typedef struct component_matrice3d
 
 typedef struct component_margins
 {
-  struct margins value;
+  struct margins_ngrid value;
   Uint8 corner_r;
   Uint8 corner_g;
   Uint8 corner_b;
@@ -189,6 +182,26 @@ typedef struct component_resize
   Uint8 toggled_a;
 } resize_c;
 
+typedef struct component_cache
+{
+  bool b_should_regenerate;
+  string_t cache_name;
+} cache_c;
+
+typedef struct component_pattern
+{
+  string_t name;
+  bool b_is_shown;
+  bool b_uses_color;
+} pattern_c;
+
+typedef struct component_ngrid
+{
+  string_t name;
+  bool b_is_shown;
+  bool b_uses_color;
+} ngrid_c;
+
 typedef struct component_sprite
 {
   string_t name;
@@ -198,9 +211,6 @@ typedef struct component_sprite
   bool b_uses_color;
   bool b_overrides_bounds;
   SDL_FPoint over_size;
-  bool b_should_cache;
-  bool b_should_regenerate;
-  string_t cache_name;
 } sprite_c;
 
 typedef struct component_text

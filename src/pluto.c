@@ -15,6 +15,7 @@ ECS_COMPONENT_DECLARE (alpha_c);
 ECS_COMPONENT_DECLARE (anim_player_c);
 ECS_COMPONENT_DECLARE (bounds_c);
 ECS_COMPONENT_DECLARE (box_c);
+ECS_COMPONENT_DECLARE (cache_c);
 ECS_COMPONENT_DECLARE (click_c);
 ECS_COMPONENT_DECLARE (color_c);
 ECS_COMPONENT_DECLARE (drag_c);
@@ -23,7 +24,9 @@ ECS_COMPONENT_DECLARE (index_c);
 ECS_COMPONENT_DECLARE (mat2d_c);
 ECS_COMPONENT_DECLARE (mat3d_c);
 ECS_COMPONENT_DECLARE (margins_c);
+ECS_COMPONENT_DECLARE (ngrid_c);
 ECS_COMPONENT_DECLARE (origin_c);
+ECS_COMPONENT_DECLARE (pattern_c);
 ECS_COMPONENT_DECLARE (resize_c);
 ECS_COMPONENT_DECLARE (sprite_c);
 ECS_COMPONENT_DECLARE (text_c);
@@ -85,6 +88,16 @@ box (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       box[i].b_is_shown = true;
       box[i].b_is_filled = false;
       box[i].b_uses_color = false;
+    }
+}
+
+static void
+cache (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  cache_c *cache = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      cache[i].b_should_regenerate = false;
     }
 }
 
@@ -182,7 +195,7 @@ margins (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   margins_c *margins = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      margins[i].value = (struct margins){
+      margins[i].value = (struct margins_ngrid){
         .top = 0.f, .left = 0.f, .bottom = 0.f, .right = 0.f
       };
       margins[i].edge_r = 155u;
@@ -198,6 +211,17 @@ margins (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 }
 
 static void
+ngrid (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  ngrid_c *ngrid = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      ngrid[i].b_is_shown = true;
+      ngrid[i].b_uses_color = false;
+    }
+}
+
+static void
 origin (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 {
   origin_c *origin = ptr;
@@ -209,6 +233,17 @@ origin (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       origin[i].b_is_center = false;
       origin[i].b_can_be_scaled = false;
       origin[i].b_is_screen_based = false;
+    }
+}
+
+static void
+pattern (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  pattern_c *pattern = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      pattern[i].b_is_shown = true;
+      pattern[i].b_uses_color = false;
     }
 }
 
@@ -239,8 +274,6 @@ sprite (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       sprite[i].offset = (SDL_FPoint){ 0.f, 0.f };
       sprite[i].b_overrides_bounds = false;
       sprite[i].over_size = (SDL_FPoint){ 0.f, 0.f };
-      sprite[i].b_should_cache = false;
-      sprite[i].b_should_regenerate = false;
     }
 }
 
@@ -601,7 +634,7 @@ system_margins_check_handles (ecs_iter_t *it)
     {
       SDL_FPoint pos = origin[i].world;
       SDL_FPoint size = bounds[i].size;
-      struct margins values = margins[i].value;
+      struct margins_ngrid values = margins[i].value;
 
       if (origin[i].b_can_be_scaled == true)
         {
@@ -704,7 +737,7 @@ system_margins_draw (ecs_iter_t *it)
 
       SDL_FPoint pos = origin[i].world;
       SDL_FPoint size = bounds[i].size;
-      struct margins margins_values
+      struct margins_ngrid margins_values
           = { margins[i].value.top, margins[i].value.left,
               margins[i].value.bottom, margins[i].value.right };
 
@@ -825,6 +858,113 @@ system_margins_draw (ecs_iter_t *it)
       SDL_RenderRect (core->rend, &bottom_edge_rect);
       SDL_RenderRect (core->rend, &left_edge_rect);
       SDL_RenderRect (core->rend, &right_edge_rect);
+    }
+}
+
+static void
+system_ngrid_draw (ecs_iter_t *it)
+{
+  ngrid_c *ngrid = ecs_field (it, ngrid_c, 0);
+
+  bounds_c *bounds = ecs_field (it, bounds_c, 1);
+  origin_c *origin = ecs_field (it, origin_c, 2);
+  margins_c *margins = ecs_field (it, margins_c, 3);
+  Sint8 alpha_id = 4;
+  alpha_c *alpha_opt = NULL;
+  if (ecs_field_is_set (it, alpha_id) == true)
+    {
+      alpha_opt = ecs_field (it, alpha_c, alpha_id);
+    }
+  Sint8 color_id = 5;
+  color_c *color_opt = NULL;
+  if (ecs_field_is_set (it, color_id) == true)
+    {
+      color_opt = ecs_field (it, color_c, color_id);
+    }
+  Sint8 anim_player_id = 6;
+  anim_player_c *anim_player_opt = NULL;
+  if (ecs_field_is_set (it, anim_player_id) == true)
+    {
+      anim_player_opt = ecs_field (it, anim_player_c, anim_player_id);
+    }
+  Sint8 cache_id = 7;
+  cache_c *cache_opt = NULL;
+  if (ecs_field_is_set (it, cache_id) == true)
+    {
+      cache_opt = ecs_field (it, cache_c, cache_id);
+    }
+
+  core_s *core = ecs_get_mut (it->world, ecs_id (core_s), core_s);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (ngrid[i].b_is_shown == false)
+        {
+          continue;
+        }
+      SDL_FRect dest = { .x = origin[i].world.x, .y = origin[i].world.y };
+
+      if (origin[i].b_can_be_scaled == true)
+        {
+          dest.x *= core->scale;
+          dest.y *= core->scale;
+        }
+
+      dest.w = bounds[i].size.x;
+      dest.h = bounds[i].size.y;
+
+      if (bounds[i].b_can_be_scaled == true)
+        {
+          dest.w *= core->scale;
+          dest.h *= core->scale;
+        }
+      if (origin[i].b_is_center == true)
+        {
+          dest.x -= dest.w / 2;
+          dest.y -= dest.h / 2;
+        }
+      Uint8 ngrid_r = 255u;
+      Uint8 ngrid_g = 255u;
+      Uint8 ngrid_b = 255u;
+      Uint8 ngrid_a = 255u;
+      if (ngrid[i].b_uses_color == true)
+        {
+          if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+            {
+              ngrid_a = alpha_opt[i].value;
+            }
+          if (color_opt != NULL && &color_opt[i] != NULL)
+            {
+              ngrid_r = color_opt[i].r;
+              ngrid_g = color_opt[i].g;
+              ngrid_b = color_opt[i].b;
+            }
+        }
+
+      /* Enable a render target if needs be. */
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
+        {
+          if (cache_opt[i].b_should_regenerate == false)
+            {
+              continue;
+            }
+          render_target_switch (core->rend, core->rts,
+                                cache_opt[i].cache_name);
+          cache_opt[i].b_should_regenerate = false;
+        }
+
+      struct satlas_render_color_params params = { .opacity = ngrid_a,
+                                                   .tint_r = ngrid_r,
+                                                   .tint_g = ngrid_g,
+                                                   .tint_b = ngrid_b };
+
+      satlas_render_entry_ngrid (core->atlas, ngrid[i].name, &margins[i].value,
+                                 core->scale, &dest, &params);
+
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
+        {
+          render_target_switch (core->rend, core->rts, STRING_CTE (""));
+        }
     }
 }
 
@@ -1021,21 +1161,17 @@ system_sprite_draw (ecs_iter_t *it)
     {
       anim_player_opt = ecs_field (it, anim_player_c, anim_player_id);
     }
+  Sint8 cache_id = 6;
+  cache_c *cache_opt = NULL;
+  if (ecs_field_is_set (it, cache_id) == true)
+    {
+      cache_opt = ecs_field (it, cache_c, cache_id);
+    }
 
   core_s *core = ecs_get_mut (it->world, ecs_id (core_s), core_s);
 
   for (Sint32 i = 0; i < it->count; i++)
     {
-      if (ecs_has_pair (it->world, it->entities[i],
-                        ecs_lookup (it->world, "scene"), EcsAny)
-              == true
-          && ecs_has_pair (it->world, it->entities[i],
-                           ecs_lookup (it->world, "scene"),
-                           core->current_scene)
-                 == false)
-        {
-          continue;
-        }
       if (sprite[i].b_is_shown == false)
         {
           continue;
@@ -1098,20 +1234,21 @@ system_sprite_draw (ecs_iter_t *it)
 
       /* Enable a render target if needs be. */
 
-      if (sprite[i].b_should_cache == true)
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          if (sprite[i].b_should_regenerate == false)
+          if (cache_opt[i].b_should_regenerate == false)
             {
               continue;
             }
-          render_target_switch (core->rend, core->rts, sprite[i].cache_name);
-          sprite[i].b_should_regenerate = false;
+          render_target_switch (core->rend, core->rts,
+                                cache_opt[i].cache_name);
+          cache_opt[i].b_should_regenerate = false;
         }
 
-      struct sprite_params params = { .opacity = sprite_alpha,
-                                      .tint_r = sprite_r,
-                                      .tint_g = sprite_g,
-                                      .tint_b = sprite_b };
+      struct satlas_render_color_params params = { .opacity = sprite_alpha,
+                                                   .tint_r = sprite_r,
+                                                   .tint_g = sprite_g,
+                                                   .tint_b = sprite_b };
       switch (sprite[i].render_type)
         {
         case SPRITE_RENDER_TYPE_DEFAULT:
@@ -1142,7 +1279,7 @@ system_sprite_draw (ecs_iter_t *it)
           }
         }
 
-      if (sprite[i].b_should_cache == true)
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
           render_target_switch (core->rend, core->rts, STRING_CTE (""));
         }
@@ -1385,16 +1522,34 @@ init_pluto_systems (ecs_world_t *ecs)
   {
     ecs_entity_t ent = ecs_entity (
         ecs,
+        { .name = "system_ngrid_draw",
+          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
+    ecs_query_desc_t query
+        = { .terms = { { .id = ecs_id (ngrid_c) },
+                       { .id = ecs_id (bounds_c) },
+                       { .id = ecs_id (origin_c) },
+                       { .id = ecs_id (margins_c) },
+                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+                       { .id = ecs_id (color_c), .oper = EcsOptional },
+                       { .id = ecs_id (anim_player_c), .oper = EcsOptional },
+                       { .id = ecs_id (cache_c), .oper = EcsOptional } } };
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = system_ngrid_draw });
+  }
+  {
+    ecs_entity_t ent = ecs_entity (
+        ecs,
         { .name = "system_sprite_draw",
           .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
     ecs_query_desc_t query
-        = { .terms
-            = { { .id = ecs_id (sprite_c) },
-                { .id = ecs_id (bounds_c) },
-                { .id = ecs_id (origin_c) },
-                { .id = ecs_id (alpha_c), .oper = EcsOptional },
-                { .id = ecs_id (color_c), .oper = EcsOptional },
-                { .id = ecs_id (anim_player_c), .oper = EcsOptional } } };
+        = { .terms = { { .id = ecs_id (sprite_c) },
+                       { .id = ecs_id (bounds_c) },
+                       { .id = ecs_id (origin_c) },
+                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+                       { .id = ecs_id (color_c), .oper = EcsOptional },
+                       { .id = ecs_id (anim_player_c), .oper = EcsOptional },
+                       { .id = ecs_id (cache_c), .oper = EcsOptional } } };
     ecs_system (
         ecs,
         { .entity = ent, .query = query, .callback = system_sprite_draw });
@@ -1458,6 +1613,9 @@ init_pluto_hooks (ecs_world_t *ecs)
   ecs_type_hooks_t box_hooks = { .ctor = box };
   ecs_set_hooks_id (ecs, ecs_id (box_c), &box_hooks);
 
+  ecs_type_hooks_t cache_hooks = { .ctor = cache };
+  ecs_set_hooks_id (ecs, ecs_id (cache_c), &cache_hooks);
+
   ecs_type_hooks_t click_hooks = { .ctor = click };
   ecs_set_hooks_id (ecs, ecs_id (click_c), &click_hooks);
 
@@ -1482,8 +1640,14 @@ init_pluto_hooks (ecs_world_t *ecs)
   ecs_type_hooks_t margins_hooks = { .ctor = margins };
   ecs_set_hooks_id (ecs, ecs_id (margins_c), &margins_hooks);
 
+  ecs_type_hooks_t ngrid_hooks = { .ctor = ngrid };
+  ecs_set_hooks_id (ecs, ecs_id (ngrid_c), &ngrid_hooks);
+
   ecs_type_hooks_t origin_hooks = { .ctor = origin };
   ecs_set_hooks_id (ecs, ecs_id (origin_c), &origin_hooks);
+
+  ecs_type_hooks_t pattern_hooks = { .ctor = pattern };
+  ecs_set_hooks_id (ecs, ecs_id (pattern_c), &pattern_hooks);
 
   ecs_type_hooks_t resize_hooks = { .ctor = resize };
   ecs_set_hooks_id (ecs, ecs_id (resize_c), &resize_hooks);
@@ -1555,6 +1719,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, anim_player_c);
   ECS_COMPONENT_DEFINE (ecs, bounds_c);
   ECS_COMPONENT_DEFINE (ecs, box_c);
+  ECS_COMPONENT_DEFINE (ecs, cache_c);
   ECS_COMPONENT_DEFINE (ecs, click_c);
   ECS_COMPONENT_DEFINE (ecs, color_c);
   ECS_COMPONENT_DEFINE (ecs, drag_c);
@@ -1563,7 +1728,9 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, mat2d_c);
   ECS_COMPONENT_DEFINE (ecs, mat3d_c);
   ECS_COMPONENT_DEFINE (ecs, margins_c);
+  ECS_COMPONENT_DEFINE (ecs, ngrid_c);
   ECS_COMPONENT_DEFINE (ecs, origin_c);
+  ECS_COMPONENT_DEFINE (ecs, pattern_c);
   ECS_COMPONENT_DEFINE (ecs, resize_c);
   ECS_COMPONENT_DEFINE (ecs, sprite_c);
   ECS_COMPONENT_DEFINE (ecs, text_c);
