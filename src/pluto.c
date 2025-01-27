@@ -2,11 +2,11 @@
 
 #include "SDL3_ttf/SDL_ttf.h"
 
-#include "game_modules/input_man.h"
-#include "game_modules/log.h"
-#include "game_modules/profiling.h"
-#include "game_modules/sprite_atlas.h"
-#include "game_modules/text_man.h"
+#include "input_man.h"
+#include "log.h"
+#include "profiling.h"
+#include "sprite_atlas.h"
+#include "text_man.h"
 
 ECS_COMPONENT_DECLARE (core_s);
 

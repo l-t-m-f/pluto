@@ -7,11 +7,11 @@
 #include "m-list.h"
 #include "m-string.h"
 
-#include "game_modules/container_types.h"
+#include "container_types.h"
 
-#include "game_modules/animation.h"
-#include "game_modules/sprite_atlas.h"
-#include "game_modules/render_target.h"
+#include "animation.h"
+#include "sprite_atlas.h"
+#include "render_target.h"
 
 #define MARGIN_HANDLE_NONE 0
 #define MARGIN_HANDLE_TOP_EDGE 1

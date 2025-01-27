@@ -22,7 +22,7 @@ set(SDL3_INCLUDE
         ${CMAKE_SOURCE_DIR}/deps/SDL_ttf/include
 )
 
-set(GAME_MODULES_INCLUDE ${CMAKE_SOURCE_DIR}/deps)
+set(GAME_MODULES_INCLUDE ${CMAKE_SOURCE_DIR}/deps/game_modules)
 
 set(BINN_INCLUDE ${CMAKE_SOURCE_DIR}/deps/binn/src)
 set(FLECS_INCLUDE ${CMAKE_SOURCE_DIR}/deps/flecs/include)
