@@ -25,6 +25,11 @@
 #define SPRITE_RENDER_TYPE_TARGET 4
 #define SPRITE_RENDER_TYPE_MAX 5
 
+
+ARRAY_DEF(arr_entity, ecs_entity_t, M_BASIC_OPLIST)
+ARRAY_DEF(mat2d_entity, arr_entity_t, M_ARRAY_OPLIST(arr_entity))
+ARRAY_DEF(mat3d_entity, mat2d_entity_t, M_ARRAY_OPLIST(mat2d_entity))
+
 struct margins
 {
   float top;
@@ -72,11 +77,16 @@ typedef struct component_anim_player
 {
   dict_string_anim_pose_t poses;
   Uint8 current_tick;
-  char *control_pose;
+  string_t control_pose;
   Sint32 control_direction;
   SDL_Point current_frame;
   SDL_FRect subsection;
 } anim_player_c;
+
+typedef struct component_array
+{
+  arr_entity_t content;
+} array_c;
 
 typedef struct component_bounds
 {
@@ -127,6 +137,23 @@ typedef struct component_hover
   Uint8 toggled_g;
   Uint8 toggled_b;
 } hover_c;
+
+typedef struct component_index
+{
+  Sint32 x;
+  Sint32 y;
+  Sint32 z;
+} index_c;
+
+typedef struct component_matrice2d
+{
+  mat2d_entity_t content;
+} mat2d_c;
+
+typedef struct component_matrice3d
+{
+  mat3d_entity_t content;
+} mat3d_c;
 
 typedef struct component_margins
 {

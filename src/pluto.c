@@ -10,6 +10,7 @@
 
 ECS_COMPONENT_DECLARE (core_s);
 
+ECS_COMPONENT_DECLARE (array_c);
 ECS_COMPONENT_DECLARE (alpha_c);
 ECS_COMPONENT_DECLARE (anim_player_c);
 ECS_COMPONENT_DECLARE (bounds_c);
@@ -18,6 +19,9 @@ ECS_COMPONENT_DECLARE (click_c);
 ECS_COMPONENT_DECLARE (color_c);
 ECS_COMPONENT_DECLARE (drag_c);
 ECS_COMPONENT_DECLARE (hover_c);
+ECS_COMPONENT_DECLARE (index_c);
+ECS_COMPONENT_DECLARE (mat2d_c);
+ECS_COMPONENT_DECLARE (mat3d_c);
 ECS_COMPONENT_DECLARE (margins_c);
 ECS_COMPONENT_DECLARE (origin_c);
 ECS_COMPONENT_DECLARE (resize_c);
@@ -27,6 +31,16 @@ ECS_COMPONENT_DECLARE (text_c);
 /******************************/
 /*********** Hooks ************/
 /******************************/
+
+static void
+array (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  array_c *array = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      arr_entity_init (array[i].content);
+    }
+}
 
 static void
 alpha (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
@@ -46,7 +60,6 @@ anim_player (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
     {
       anim_player[i].current_tick = 0u;
       anim_player[i].current_frame = (SDL_Point){ 0, 0 };
-      anim_player[i].control_pose = "";
       anim_player[i].control_direction = 0;
       anim_player[i].subsection = (SDL_FRect){ 0.f, 0.f };
     }
@@ -128,6 +141,38 @@ hover (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       hover[i].toggled_r = 0u;
       hover[i].toggled_g = 125u;
       hover[i].toggled_b = 125u;
+    }
+}
+
+static void
+index (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  index_c *index = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      index[i].x = 0;
+      index[i].y = 0;
+      index[i].z = 0;
+    }
+}
+
+static void
+mat2d (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  mat2d_c *mat2d = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      mat2d_entity_init (mat2d[i].content);
+    }
+}
+
+static void
+mat3d (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  mat3d_c *mat3d = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      mat3d_entity_init (mat3d[i].content);
     }
 }
 
@@ -235,10 +280,8 @@ system_anim_player_advance (ecs_iter_t *it)
 
   for (Sint32 i = 0; i < it->count; i++)
     {
-      string_t temp;
-      string_init_set_str (temp, anim_player[i].control_pose);
-      struct anim_pose *pose
-          = *dict_string_anim_pose_get (anim_player[i].poses, temp);
+      struct anim_pose *pose = *dict_string_anim_pose_get (
+          anim_player[i].poses, anim_player[i].control_pose);
 
       struct anim_flipbook *flipbook = *dict_sint32_anim_flipbook_get (
           pose->directions, anim_player[i].control_direction);
@@ -268,8 +311,6 @@ system_anim_player_advance (ecs_iter_t *it)
         {
           anim_player[i].current_tick++;
         }
-
-      string_clear (temp);
     }
 }
 
@@ -281,11 +322,8 @@ system_anim_player_assign_sprite_name (ecs_iter_t *it)
 
   for (Sint32 i = 0; i < it->count; i++)
     {
-      string_t name;
-      string_init_set_str (name, anim_player[i].control_pose);
-      struct anim_pose *pose
-          = *dict_string_anim_pose_get (anim_player[i].poses, name);
-      string_clear (name);
+      struct anim_pose *pose = *dict_string_anim_pose_get (
+          anim_player[i].poses, anim_player[i].control_pose);
 
       struct anim_flipbook *flipbook = *dict_sint32_anim_flipbook_get (
           pose->directions, anim_player[i].control_direction);
@@ -300,11 +338,8 @@ system_anim_player_set_subsection (ecs_iter_t *it)
 
   for (Sint32 i = 0; i < it->count; i++)
     {
-      string_t name;
-      string_init_set_str (name, anim_player[i].control_pose);
-      struct anim_pose *pose
-          = *dict_string_anim_pose_get (anim_player[i].poses, name);
-      string_clear (name);
+      struct anim_pose *pose = *dict_string_anim_pose_get (
+          anim_player[i].poses, anim_player[i].control_pose);
       struct anim_flipbook *flipbook = *dict_sint32_anim_flipbook_get (
           pose->directions, anim_player[i].control_direction);
 
@@ -1195,16 +1230,6 @@ static void
 init_pluto_systems (ecs_world_t *ecs)
 {
   {
-    ecs_entity_t ent
-        = ecs_entity (ecs, { .name = "system_origin_bind_relative",
-                             .add = ecs_ids (ecs_dependson (
-                                 ecs_lookup (ecs, "pre_render_phase"))) });
-    ecs_query_desc_t query = { .terms = { { .id = ecs_id (origin_c) } } };
-    ecs_system (ecs, { .entity = ent,
-                       .query = query,
-                       .callback = system_origin_bind_relative });
-  }
-  {
     ecs_entity_t ent = ecs_entity (ecs, {
                                             .name = "system_drag_apply_delta",
                                         });
@@ -1240,6 +1265,48 @@ init_pluto_systems (ecs_world_t *ecs)
     ecs_system (ecs, { .entity = ent,
                        .query = query,
                        .callback = system_resize_apply_delta });
+  }
+
+  /******************************************
+   ******************************************/
+
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_origin_bind_relative",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (origin_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_origin_bind_relative });
+  }
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_anim_player_advance",
+                             .add = ecs_ids (ecs_dependson (EcsOnUpdate)) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (anim_player_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_anim_player_advance });
+  }
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_anim_player_assign_sprite_name",
+                             .add = ecs_ids (ecs_dependson (EcsOnUpdate)) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (anim_player_c) },
+                                          { .id = ecs_id (sprite_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_anim_player_assign_sprite_name });
+  }
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_anim_player_set_subsection",
+                             .add = ecs_ids (ecs_dependson (EcsOnUpdate)) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (anim_player_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_anim_player_set_subsection });
   }
   {
     ecs_entity_t ent
@@ -1376,6 +1443,9 @@ init_pluto_phases (ecs_world_t *ecs)
 static void
 init_pluto_hooks (ecs_world_t *ecs)
 {
+  ecs_type_hooks_t array_hooks = { .ctor = array };
+  ecs_set_hooks_id (ecs, ecs_id (array_c), &array_hooks);
+
   ecs_type_hooks_t alpha_hooks = { .ctor = alpha };
   ecs_set_hooks_id (ecs, ecs_id (alpha_c), &alpha_hooks);
 
@@ -1399,6 +1469,15 @@ init_pluto_hooks (ecs_world_t *ecs)
 
   ecs_type_hooks_t hover_hooks = { .ctor = hover };
   ecs_set_hooks_id (ecs, ecs_id (hover_c), &hover_hooks);
+
+  ecs_type_hooks_t index_hooks = { .ctor = index };
+  ecs_set_hooks_id (ecs, ecs_id (index_c), &index_hooks);
+
+  ecs_type_hooks_t mat2d_hooks = { .ctor = mat2d };
+  ecs_set_hooks_id (ecs, ecs_id (mat2d_c), &mat2d_hooks);
+
+  ecs_type_hooks_t mat3d_hooks = { .ctor = mat3d };
+  ecs_set_hooks_id (ecs, ecs_id (mat3d_c), &mat3d_hooks);
 
   ecs_type_hooks_t margins_hooks = { .ctor = margins };
   ecs_set_hooks_id (ecs, ecs_id (margins_c), &margins_hooks);
@@ -1471,6 +1550,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
 {
   ECS_COMPONENT_DEFINE (ecs, core_s);
 
+  ECS_COMPONENT_DEFINE (ecs, array_c);
   ECS_COMPONENT_DEFINE (ecs, alpha_c);
   ECS_COMPONENT_DEFINE (ecs, anim_player_c);
   ECS_COMPONENT_DEFINE (ecs, bounds_c);
@@ -1479,6 +1559,9 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, color_c);
   ECS_COMPONENT_DEFINE (ecs, drag_c);
   ECS_COMPONENT_DEFINE (ecs, hover_c);
+  ECS_COMPONENT_DEFINE (ecs, index_c);
+  ECS_COMPONENT_DEFINE (ecs, mat2d_c);
+  ECS_COMPONENT_DEFINE (ecs, mat3d_c);
   ECS_COMPONENT_DEFINE (ecs, margins_c);
   ECS_COMPONENT_DEFINE (ecs, origin_c);
   ECS_COMPONENT_DEFINE (ecs, resize_c);

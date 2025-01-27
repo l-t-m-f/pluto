@@ -3,6 +3,7 @@
 
 #include "pluto.h"
 
+#include "game_modules/animation.h"
 #include "game_modules/input_man.h"
 #include "game_modules/log.h"
 #include "game_modules/text_man.h"
@@ -25,7 +26,8 @@ void
 handle_mouse_press (struct input_man *input_man, SDL_FPoint pos, Uint8 button,
                     void *param)
 {
-  ecs_run (param, ecs_lookup (param, "system_margins_check_handles"), 0.f, NULL);
+  ecs_run (param, ecs_lookup (param, "system_margins_check_handles"), 0.f,
+           NULL);
 }
 void
 handle_mouse_release (struct input_man *input_man, SDL_FPoint pos,
@@ -34,7 +36,8 @@ handle_mouse_release (struct input_man *input_man, SDL_FPoint pos,
   struct custom_input_data *custom_data = input_man->custom_data;
   custom_data->b_is_resizing_widget = false;
   custom_data->b_is_dragging_widget = false;
-  ecs_run (param, ecs_lookup (param, "system_margins_check_handles"), 0.f, NULL);
+  ecs_run (param, ecs_lookup (param, "system_margins_check_handles"), 0.f,
+           NULL);
 }
 void
 handle_mouse_hold (struct input_man *input_man, SDL_FPoint pos, Uint8 button,
@@ -55,6 +58,7 @@ main (int argc, char *argv[])
   ecs_world_t *ecs = ecs_init ();
   core_s *core = init_pluto (ecs, (SDL_Point){ 640, 480 });
 
+  ECS_COMPONENT (ecs, anim_player_c);
   ECS_COMPONENT (ecs, alpha_c);
   ECS_COMPONENT (ecs, bounds_c);
   ECS_COMPONENT (ecs, box_c);
@@ -82,7 +86,7 @@ main (int argc, char *argv[])
     click->toggled_r = 255u;
     click->toggled_g = 255u;
     click->toggled_b = 0u;
-    ecs_add(ecs, ent, drag_c);
+    ecs_add (ecs, ent, drag_c);
     color_c *color = ecs_ensure (ecs, ent, color_c);
     color->default_r = 0u;
     color->default_g = 0u;
@@ -159,6 +163,46 @@ main (int argc, char *argv[])
     sprite->render_type = SPRITE_RENDER_TYPE_DEFAULT;
     sprite->b_uses_color = false;
     string_init_set_str (sprite->name, "T_Cursor.png");
+  }
+
+  /* Animation test */
+  {
+    ecs_entity_t ent = ecs_entity (ecs, { .name = "animation" });
+    anim_player_c *anim_player = ecs_ensure (ecs, ent, anim_player_c);
+    struct anim_flipbook *flipbook
+        = SDL_malloc (sizeof (struct anim_flipbook));
+    flipbook->play_speed = 24u;
+    flipbook->frame_size = (SDL_FPoint){ 64.f, 96.f };
+    flipbook->frame_count = (SDL_Point){ 2, 1 };
+    string_init_set_str (flipbook->name, "T_Animation.png");
+    struct anim_pose *pose = SDL_malloc (sizeof (struct anim_pose));
+    dict_sint32_anim_flipbook_init (pose->directions);
+    dict_sint32_anim_flipbook_set_at (pose->directions, 0, flipbook);
+    dict_string_anim_pose_init (anim_player->poses);
+    dict_string_anim_pose_set_at (anim_player->poses, STRING_CTE ("idle"),
+                                  pose);
+    string_init_set_str (anim_player->control_pose, "idle");
+    anim_player->control_direction = 0;
+    alpha_c *alpha = ecs_ensure (ecs, ent, alpha_c);
+    alpha->value = 255u;
+    bounds_c *bounds = ecs_ensure (ecs, ent, bounds_c);
+    bounds->size = (SDL_FPoint){ 64.f, 96.f };
+    bounds->b_can_be_scaled = true;
+    box_c *box = ecs_ensure (ecs, ent, box_c);
+    box->b_uses_color = false;
+    box->b_is_shown = true;
+    box->b_is_filled = false;
+    color_c *color = ecs_ensure (ecs, ent, color_c);
+    color->default_r = 55u;
+    color->default_g = 155u;
+    color->default_b = 0u;
+    origin_c *origin = ecs_ensure (ecs, ent, origin_c);
+    origin->relative = (SDL_FPoint){ 40.f, 40.f };
+    origin->b_can_be_scaled = false;
+    origin->b_is_center = false;
+    sprite_c *sprite = ecs_ensure (ecs, ent, sprite_c);
+    sprite->render_type = SPRITE_RENDER_TYPE_ANIMATED;
+    sprite->b_uses_color = false;
   }
 
   SDL_Event e;
