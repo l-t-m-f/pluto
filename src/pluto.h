@@ -3,6 +3,11 @@
 
 #include "SDL3/SDL.h"
 #include "flecs.h"
+#include "m-array.h"
+#include "m-list.h"
+#include "m-string.h"
+
+#include "game_modules/container_types.h"
 
 #include "game_modules/animation.h"
 #include "game_modules/sprite_atlas.h"
@@ -25,11 +30,6 @@
 #define SPRITE_RENDER_TYPE_TILED 3
 #define SPRITE_RENDER_TYPE_TARGET 4
 #define SPRITE_RENDER_TYPE_MAX 5
-
-
-ARRAY_DEF(arr_entity, ecs_entity_t, M_BASIC_OPLIST)
-ARRAY_DEF(mat2d_entity, arr_entity_t, M_ARRAY_OPLIST(arr_entity))
-ARRAY_DEF(mat3d_entity, mat2d_entity_t, M_ARRAY_OPLIST(mat2d_entity))
 
 struct custom_input_data
 {

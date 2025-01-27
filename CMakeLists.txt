@@ -56,11 +56,12 @@ if (EXISTS ${GAME_MODULES_INCLUDE})
             deps/game_modules/profiling.c
             deps/game_modules/util.c)
     target_compile_options(game_modules PRIVATE -std=c99)
-    target_include_directories(game_modules PRIVATE ${SDL3_INCLUDE} ${MLIB_INCLUDE})
+    target_include_directories(game_modules PRIVATE ${SDL3_INCLUDE} ${FLECS_INCLUDE} ${MLIB_INCLUDE})
     target_link_libraries(game_modules PRIVATE
             SDL3::SDL3
             SDL3_image::SDL3_image
-            SDL3_ttf::SDL3_ttf)
+            SDL3_ttf::SDL3_ttf
+            flecs::flecs_static)
     set_target_properties(game_modules PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/deps
     )
