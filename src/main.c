@@ -58,7 +58,8 @@ main (int argc, char *argv[])
   ecs_world_t *ecs = ecs_init ();
   core_s *core = init_pluto (ecs, (SDL_Point){ 640, 480 });
 
-  dict_render_target_init (core->rts);
+    satlas_dir_to_sheets (core->atlas, "dat/gfx/test", false,
+                          STRING_CTE ("test"));
   render_target_add_to_pool (core->rend, core->rts, STRING_CTE ("RT"),
                              (SDL_Point){ 320, 240 });
 

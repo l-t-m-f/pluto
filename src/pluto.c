@@ -1976,9 +1976,9 @@ init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
   core->scale = 1.f;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
 
+  dict_render_target_init (core->rts);
+
   satlas_init (core->rend, &core->atlas);
-  satlas_dir_to_sheets (core->atlas, "dat/gfx/test", false,
-                        STRING_CTE ("test"));
 
   text_man_create_font_book (&core->text_man, core->rend);
 
