@@ -184,6 +184,7 @@ typedef struct component_margins
   Uint8 edge_b;
   Uint8 edge_a;
   Sint32 current_handle;
+  bool b_is_shown;
 } margins_c;
 
 typedef struct component_origin

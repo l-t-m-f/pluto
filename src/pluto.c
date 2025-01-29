@@ -211,6 +211,7 @@ margins (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       margins[i].corner_b = 95u;
       margins[i].corner_a = 255u;
       margins[i].current_handle = MARGIN_HANDLE_NONE;
+      margins[i].b_is_shown = false;
     }
 }
 
@@ -784,7 +785,10 @@ system_margins_draw (ecs_iter_t *it)
 
   for (Sint32 i = 0; i < it->count; i++)
     {
-
+      if(margins[i].b_is_shown == false)
+        {
+          continue;
+        }
       SDL_FPoint pos = origin[i].world;
       SDL_FPoint size = bounds[i].size;
       struct margins_ngrid margins_values
