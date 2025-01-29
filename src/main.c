@@ -62,24 +62,6 @@ main (int argc, char *argv[])
   render_target_add_to_pool (core->rend, core->rts, STRING_CTE ("RT"),
                              (SDL_Point){ 320, 240 });
 
-  ECS_COMPONENT (ecs, anim_player_c);
-  ECS_COMPONENT (ecs, alpha_c);
-  ECS_COMPONENT (ecs, bounds_c);
-  ECS_COMPONENT (ecs, box_c);
-  ECS_COMPONENT (ecs, cache_c);
-  ECS_COMPONENT (ecs, click_c);
-  ECS_COMPONENT (ecs, color_c);
-  ECS_COMPONENT (ecs, drag_c);
-  ECS_COMPONENT (ecs, hover_c);
-  ECS_COMPONENT (ecs, margins_c);
-  ECS_COMPONENT (ecs, ngrid_c);
-  ECS_COMPONENT (ecs, origin_c);
-  ECS_COMPONENT (ecs, render_target_c);
-  ECS_COMPONENT (ecs, resize_c);
-  ECS_COMPONENT (ecs, pattern_c);
-  ECS_COMPONENT (ecs, sprite_c);
-  ECS_COMPONENT (ecs, text_c);
-
   /* Test box */
   {
     ecs_entity_t ent = ecs_entity (ecs, { .name = "box1" });

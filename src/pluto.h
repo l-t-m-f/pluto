@@ -13,6 +13,30 @@
 #include "sprite_atlas.h"
 #include "render_target.h"
 
+extern ECS_COMPONENT_DECLARE (core_s);
+
+extern ECS_COMPONENT_DECLARE (array_c);
+extern ECS_COMPONENT_DECLARE (alpha_c);
+extern ECS_COMPONENT_DECLARE (anim_player_c);
+extern ECS_COMPONENT_DECLARE (bounds_c);
+extern ECS_COMPONENT_DECLARE (box_c);
+extern ECS_COMPONENT_DECLARE (cache_c);
+extern ECS_COMPONENT_DECLARE (click_c);
+extern ECS_COMPONENT_DECLARE (color_c);
+extern ECS_COMPONENT_DECLARE (drag_c);
+extern ECS_COMPONENT_DECLARE (hover_c);
+extern ECS_COMPONENT_DECLARE (index_c);
+extern ECS_COMPONENT_DECLARE (mat2d_c);
+extern ECS_COMPONENT_DECLARE (mat3d_c);
+extern ECS_COMPONENT_DECLARE (margins_c);
+extern ECS_COMPONENT_DECLARE (ngrid_c);
+extern ECS_COMPONENT_DECLARE (origin_c);
+extern ECS_COMPONENT_DECLARE (pattern_c);
+extern ECS_COMPONENT_DECLARE (render_target_c);
+extern ECS_COMPONENT_DECLARE (resize_c);
+extern ECS_COMPONENT_DECLARE (sprite_c);
+extern ECS_COMPONENT_DECLARE (text_c);
+
 #define MARGIN_HANDLE_NONE 0
 #define MARGIN_HANDLE_TOP_EDGE 1
 #define MARGIN_HANDLE_TOP_LEFT_CORNER 2
