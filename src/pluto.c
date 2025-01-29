@@ -76,6 +76,9 @@ bounds (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   for (Sint32 i = 0; i < count; i++)
     {
       bounds[i].size = (SDL_FPoint){ 0.f, 0.f };
+      bounds[i].size_callback = NULL;
+      bounds[i].width_callback = NULL;
+      bounds[i].height_callback = NULL;
       bounds[i].b_can_be_scaled = false;
     }
 }
@@ -405,6 +408,31 @@ system_anim_player_set_subsection (ecs_iter_t *it)
         .h = flipbook->frame_size.y
       };
       anim_player[i].subsection = new_subsection;
+    }
+}
+
+static void
+system_bounds_bind (ecs_iter_t *it)
+{
+  bounds_c *bounds = ecs_field (it, bounds_c, 0);
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (bounds[i].size_callback != NULL)
+        {
+          bounds[i].size
+              = bounds[i].size_callback (it->entities[i], it->world);
+          continue;
+        }
+      if (bounds[i].width_callback != NULL)
+        {
+          bounds[i].size.x
+              = bounds[i].width_callback (it->entities[i], it->world);
+        }
+      if (bounds[i].height_callback != NULL)
+        {
+          bounds[i].size.y
+              = bounds[i].height_callback (it->entities[i], it->world);
+        }
     }
 }
 
@@ -1624,7 +1652,16 @@ init_pluto_systems (ecs_world_t *ecs)
 
   /******************************************
    ******************************************/
-
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_bounds_bind",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (bounds_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_bounds_bind });
+  }
   {
     ecs_entity_t ent
         = ecs_entity (ecs, { .name = "system_origin_bind_relative",

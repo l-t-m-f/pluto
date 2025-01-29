@@ -82,6 +82,9 @@ typedef struct component_bounds
 {
   SDL_FPoint size;
   bool b_can_be_scaled;
+  SDL_FPoint (*size_callback)(ecs_entity_t self, ecs_world_t *world);
+  float (*width_callback)(ecs_entity_t self, ecs_world_t *world);
+  float (*height_callback)(ecs_entity_t self, ecs_world_t *world);
 } bounds_c;
 
 typedef struct component_box
