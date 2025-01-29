@@ -191,7 +191,9 @@ typedef struct component_origin
 {
   SDL_FPoint world;
   SDL_FPoint relative;
-  SDL_FPoint (*relative_callback) (ecs_world_t *);
+  SDL_FPoint (*relative_callback) (ecs_entity_t ent, ecs_world_t *);
+  float (*relative_x_callback) (ecs_entity_t ent, ecs_world_t *);
+  float (*relative_y_callback) (ecs_entity_t ent, ecs_world_t *);
   bool b_is_center;
   bool b_can_be_scaled;
   bool b_is_screen_based;

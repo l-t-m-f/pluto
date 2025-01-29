@@ -235,6 +235,8 @@ origin (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       origin[i].world = (SDL_FPoint){ 0.f, 0.f };
       origin[i].relative = (SDL_FPoint){ 0.f, 0.f };
       origin[i].relative_callback = NULL;
+      origin[i].relative_x_callback = NULL;
+      origin[i].relative_y_callback = NULL;
       origin[i].b_is_center = false;
       origin[i].b_can_be_scaled = false;
       origin[i].b_is_screen_based = false;
@@ -1023,16 +1025,27 @@ system_ngrid_draw (ecs_iter_t *it)
 }
 
 static void
-system_origin_bind_relative (ecs_iter_t *it)
+system_origin_bind (ecs_iter_t *it)
 {
   origin_c *origin = ecs_field (it, origin_c, 0);
   for (Sint32 i = 0; i < it->count; i++)
     {
-      if (origin[i].relative_callback == NULL)
+      if (origin[i].relative_callback != NULL)
         {
+          origin[i].relative
+              = origin[i].relative_callback (it->entities[i], it->world);
           continue;
         }
-      origin[i].relative = origin[i].relative_callback (it->world);
+      if (origin[i].relative_x_callback != NULL)
+        {
+          origin[i].relative.x
+              = origin[i].relative_x_callback (it->entities[i], it->world);
+        }
+      if (origin[i].relative_y_callback != NULL)
+        {
+          origin[i].relative.y
+              = origin[i].relative_y_callback (it->entities[i], it->world);
+        }
     }
 }
 
@@ -1662,19 +1675,19 @@ init_pluto_systems (ecs_world_t *ecs)
                              .add = ecs_ids (ecs_dependson (
                                  ecs_lookup (ecs, "pre_render_phase"))) });
     ecs_query_desc_t query = { .terms = { { .id = ecs_id (bounds_c) } } };
-    ecs_system (ecs, { .entity = ent,
-                       .query = query,
-                       .callback = system_bounds_bind });
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = system_bounds_bind });
   }
   {
     ecs_entity_t ent
-        = ecs_entity (ecs, { .name = "system_origin_bind_relative",
+        = ecs_entity (ecs, { .name = "system_origin_bind",
                              .add = ecs_ids (ecs_dependson (
                                  ecs_lookup (ecs, "pre_render_phase"))) });
     ecs_query_desc_t query = { .terms = { { .id = ecs_id (origin_c) } } };
     ecs_system (ecs, { .entity = ent,
                        .query = query,
-                       .callback = system_origin_bind_relative });
+                       .callback = system_origin_bind });
   }
   {
     ecs_entity_t ent
