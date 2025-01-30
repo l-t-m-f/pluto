@@ -227,6 +227,7 @@ typedef struct component_ngrid
   string_t name;
   bool b_is_shown;
   bool b_uses_color;
+  bool b_tiled_edges;
 } ngrid_c;
 
 typedef struct component_sprite

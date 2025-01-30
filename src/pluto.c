@@ -223,6 +223,7 @@ ngrid (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
     {
       ngrid[i].b_is_shown = true;
       ngrid[i].b_uses_color = false;
+      ngrid[i].b_tiled_edges = false;
     }
 }
 
@@ -328,6 +329,7 @@ task_get_window_size (ecs_iter_t *it)
 {
   core_s *core = ecs_field (it, core_s, 0);
   SDL_GetWindowSize (core->win, &core->window_size.x, &core->window_size.y);
+  log_debug(0, "%d, %d", core->window_size.x, core->window_size.y);
 }
 
 /******************************/
@@ -1015,7 +1017,7 @@ system_ngrid_draw (ecs_iter_t *it)
                                                    .tint_b = ngrid_b };
 
       satlas_render_entry_ngrid (core->atlas, ngrid[i].name, &margins[i].value,
-                                 core->scale, &dest, &params);
+                                 core->scale, &dest, &params, ngrid[i].b_tiled_edges);
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
