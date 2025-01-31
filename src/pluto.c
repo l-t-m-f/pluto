@@ -357,7 +357,6 @@ task_get_window_size (ecs_iter_t *it)
 {
   core_s *core = ecs_field (it, core_s, 0);
   SDL_GetWindowSize (core->win, &core->window_size.x, &core->window_size.y);
-  log_debug (0, "%d, %d", core->window_size.x, core->window_size.y);
 }
 
 /******************************/
@@ -1034,8 +1033,7 @@ system_ngrid_draw (ecs_iter_t *it)
             {
               continue;
             }
-          render_target_switch (core->rend, core->rts,
-                                cache_opt[i].cache_name);
+          render_target_switch (NULL, cache_opt[i].cache_name);
           cache_opt[i].b_should_regenerate = false;
         }
 
@@ -1050,7 +1048,7 @@ system_ngrid_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          render_target_switch (core->rend, core->rts, STRING_CTE (""));
+          render_target_switch (NULL, STRING_CTE (""));
         }
     }
 }
@@ -1321,8 +1319,7 @@ system_pattern_draw (ecs_iter_t *it)
             {
               continue;
             }
-          render_target_switch (core->rend, core->rts,
-                                cache_opt[i].cache_name);
+          render_target_switch (NULL, cache_opt[i].cache_name);
           cache_opt[i].b_should_regenerate = false;
         }
 
@@ -1336,7 +1333,7 @@ system_pattern_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          render_target_switch (core->rend, core->rts, STRING_CTE (""));
+          render_target_switch (NULL, STRING_CTE (""));
         }
     }
 }
@@ -1422,8 +1419,7 @@ system_render_target_draw (ecs_iter_t *it)
             {
               continue;
             }
-          render_target_switch (core->rend, core->rts,
-                                cache_opt[i].cache_name);
+          render_target_switch (NULL, cache_opt[i].cache_name);
           cache_opt[i].b_should_regenerate = false;
         }
 
@@ -1432,12 +1428,12 @@ system_render_target_draw (ecs_iter_t *it)
       };
 
       const struct render_target *rt
-          = *dict_render_target_get (core->rts, render_target[i].name);
+          = *dict_render_target_get (core->rts->dict, render_target[i].name);
       SDL_RenderTexture (core->rend, rt->texture, NULL, &dest);
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          render_target_switch (core->rend, core->rts, STRING_CTE (""));
+          render_target_switch (NULL, STRING_CTE (""));
         }
     }
 }
@@ -1588,8 +1584,7 @@ system_draw (ecs_iter_t *it)
                 {
                   continue;
                 }
-              render_target_switch (core->rend, core->rts,
-                                    cache_opt[i].cache_name);
+              render_target_switch (NULL, cache_opt[i].cache_name);
               cache_opt[i].b_should_regenerate = false;
             }
 
@@ -1612,7 +1607,7 @@ system_draw (ecs_iter_t *it)
 
           if (cache_opt != NULL && &cache_opt[i] != NULL)
             {
-              render_target_switch (core->rend, core->rts, STRING_CTE (""));
+              render_target_switch (NULL, STRING_CTE (""));
             }
         }
       if (render_target_opt != NULL && &render_target_opt[i] != NULL)
@@ -1668,8 +1663,7 @@ system_draw (ecs_iter_t *it)
                 {
                   continue;
                 }
-              render_target_switch (core->rend, core->rts,
-                                    cache_opt[i].cache_name);
+              render_target_switch (NULL, cache_opt[i].cache_name);
               cache_opt[i].b_should_regenerate = false;
             }
 
@@ -1678,12 +1672,12 @@ system_draw (ecs_iter_t *it)
           };
 
           const struct render_target *rt
-              = *dict_render_target_get (core->rts, render_target_opt[i].name);
+              = *dict_render_target_get (core->rts->dict, render_target_opt[i].name);
           SDL_RenderTexture (core->rend, rt->texture, NULL, &dest);
 
           if (cache_opt != NULL && &cache_opt[i] != NULL)
             {
-              render_target_switch (core->rend, core->rts, STRING_CTE (""));
+              render_target_switch (NULL, STRING_CTE (""));
             }
         }
       if (pattern_opt != NULL && &pattern_opt[i] != NULL)
@@ -1739,8 +1733,7 @@ system_draw (ecs_iter_t *it)
                 {
                   continue;
                 }
-              render_target_switch (core->rend, core->rts,
-                                    cache_opt[i].cache_name);
+              render_target_switch (NULL, cache_opt[i].cache_name);
               cache_opt[i].b_should_regenerate = false;
             }
 
@@ -1754,7 +1747,7 @@ system_draw (ecs_iter_t *it)
 
           if (cache_opt != NULL && &cache_opt[i] != NULL)
             {
-              render_target_switch (core->rend, core->rts, STRING_CTE (""));
+              render_target_switch (NULL, STRING_CTE (""));
             }
         }
       if (box_opt != NULL && &box_opt[i] != NULL)
@@ -1861,8 +1854,7 @@ system_draw (ecs_iter_t *it)
                     {
                       continue;
                     }
-                  render_target_switch (core->rend, core->rts,
-                                        cache_opt[i].cache_name);
+                  render_target_switch (NULL, cache_opt[i].cache_name);
                   cache_opt[i].b_should_regenerate = false;
                 }
 
@@ -1877,8 +1869,7 @@ system_draw (ecs_iter_t *it)
 
               if (cache_opt != NULL && &cache_opt[i] != NULL)
                 {
-                  render_target_switch (core->rend, core->rts,
-                                        STRING_CTE (""));
+                  render_target_switch (NULL, STRING_CTE (""));
                 }
             }
           if (margins_opt[i].b_is_shown == false)
@@ -2160,8 +2151,7 @@ system_sprite_draw (ecs_iter_t *it)
             {
               continue;
             }
-          render_target_switch (core->rend, core->rts,
-                                cache_opt[i].cache_name);
+          render_target_switch (NULL, cache_opt[i].cache_name);
           cache_opt[i].b_should_regenerate = false;
         }
 
@@ -2183,7 +2173,7 @@ system_sprite_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          render_target_switch (core->rend, core->rts, STRING_CTE (""));
+          render_target_switch (NULL, STRING_CTE (""));
         }
     }
 }
@@ -2681,7 +2671,7 @@ init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
   core->scale = 1.f;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
 
-  dict_render_target_init (core->rts);
+  render_target_init(core->rend, &core->rts);
 
   satlas_init (core->rend, &core->atlas);
 

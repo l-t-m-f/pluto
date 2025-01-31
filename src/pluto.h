@@ -79,7 +79,7 @@ typedef struct singleton_core
   struct sprite_atlas *atlas;
   struct text_man *text_man;
   struct input_man *input_man;
-  dict_render_target_t rts;
+  struct rts_manager *rts;
   float scale;
 } core_s;
 
