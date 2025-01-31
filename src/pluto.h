@@ -26,6 +26,7 @@ extern ECS_COMPONENT_DECLARE (color_c);
 extern ECS_COMPONENT_DECLARE (drag_c);
 extern ECS_COMPONENT_DECLARE (hover_c);
 extern ECS_COMPONENT_DECLARE (index_c);
+extern ECS_COMPONENT_DECLARE (layer_c);
 extern ECS_COMPONENT_DECLARE (mat2d_c);
 extern ECS_COMPONENT_DECLARE (mat3d_c);
 extern ECS_COMPONENT_DECLARE (margins_c);
@@ -118,6 +119,12 @@ typedef struct component_box
   bool b_uses_color;
 } box_c;
 
+typedef struct component_cache
+{
+  bool b_should_regenerate;
+  string_t cache_name;
+} cache_c;
+
 typedef struct component_click
 {
   void (*callback) (void *);
@@ -162,6 +169,11 @@ typedef struct component_index
   Sint32 z;
 } index_c;
 
+typedef struct component_layer
+{
+  Sint32 value;
+} layer_c;
+
 typedef struct component_matrice2d
 {
   mat2d_entity_t content;
@@ -187,6 +199,14 @@ typedef struct component_margins
   bool b_is_shown;
 } margins_c;
 
+typedef struct component_ngrid
+{
+  string_t name;
+  bool b_is_shown;
+  bool b_uses_color;
+  bool b_tiled_edges;
+} ngrid_c;
+
 typedef struct component_origin
 {
   SDL_FPoint world;
@@ -199,6 +219,20 @@ typedef struct component_origin
   bool b_is_screen_based;
 } origin_c;
 
+typedef struct component_pattern
+{
+  string_t name;
+  bool b_is_shown;
+  bool b_uses_color;
+} pattern_c;
+
+typedef struct component_render_target
+{
+  string_t name;
+  bool b_is_shown;
+  bool b_uses_color;
+} render_target_c;
+
 typedef struct component_resize
 {
   bool b_state;
@@ -209,27 +243,6 @@ typedef struct component_resize
   Uint8 toggled_a;
 } resize_c;
 
-typedef struct component_cache
-{
-  bool b_should_regenerate;
-  string_t cache_name;
-} cache_c;
-
-typedef struct component_pattern
-{
-  string_t name;
-  bool b_is_shown;
-  bool b_uses_color;
-} pattern_c;
-
-typedef struct component_ngrid
-{
-  string_t name;
-  bool b_is_shown;
-  bool b_uses_color;
-  bool b_tiled_edges;
-} ngrid_c;
-
 typedef struct component_sprite
 {
   string_t name;
@@ -239,13 +252,6 @@ typedef struct component_sprite
   bool b_overrides_bounds;
   SDL_FPoint over_size;
 } sprite_c;
-
-typedef struct component_render_target
-{
-  string_t name;
-  bool b_is_shown;
-  bool b_uses_color;
-} render_target_c;
 
 typedef struct component_text
 {

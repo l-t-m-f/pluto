@@ -21,6 +21,7 @@ ECS_COMPONENT_DECLARE (color_c);
 ECS_COMPONENT_DECLARE (drag_c);
 ECS_COMPONENT_DECLARE (hover_c);
 ECS_COMPONENT_DECLARE (index_c);
+ECS_COMPONENT_DECLARE (layer_c);
 ECS_COMPONENT_DECLARE (mat2d_c);
 ECS_COMPONENT_DECLARE (mat3d_c);
 ECS_COMPONENT_DECLARE (margins_c);
@@ -174,6 +175,16 @@ index (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 }
 
 static void
+layer (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  layer_c *layer = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      layer[i].value = 0;
+    }
+}
+
+static void
 mat2d (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 {
   mat2d_c *mat2d = ptr;
@@ -320,6 +331,23 @@ get_mouse_position (ecs_world_t *corestate)
   return core->input_man->mouse.position.window;
 }
 
+Sint32
+order_by_layer (ecs_entity_t e1, const void *v1, ecs_entity_t e2,
+                const void *v2)
+{
+  const layer_c *layer_e1 = v1;
+  const layer_c *layer_e2 = v2;
+  if (layer_e1->value < layer_e2->value)
+    {
+      return -1;
+    }
+  else if (layer_e1->value > layer_e2->value)
+    {
+      return 1;
+    }
+  return 0;
+}
+
 /******************************/
 /*********** Tasks ************/
 /******************************/
@@ -329,7 +357,7 @@ task_get_window_size (ecs_iter_t *it)
 {
   core_s *core = ecs_field (it, core_s, 0);
   SDL_GetWindowSize (core->win, &core->window_size.x, &core->window_size.y);
-  log_debug(0, "%d, %d", core->window_size.x, core->window_size.y);
+  log_debug (0, "%d, %d", core->window_size.x, core->window_size.y);
 }
 
 /******************************/
@@ -789,7 +817,7 @@ system_margins_draw (ecs_iter_t *it)
 
   for (Sint32 i = 0; i < it->count; i++)
     {
-      if(margins[i].b_is_shown == false)
+      if (margins[i].b_is_shown == false)
         {
           continue;
         }
@@ -1017,7 +1045,8 @@ system_ngrid_draw (ecs_iter_t *it)
                                                    .tint_b = ngrid_b };
 
       satlas_render_entry_ngrid (core->atlas, ngrid[i].name, &margins[i].value,
-                                 core->scale, &dest, &params, ngrid[i].b_tiled_edges);
+                                 core->scale, &dest, &params,
+                                 ngrid[i].b_tiled_edges);
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
@@ -1414,6 +1443,620 @@ system_render_target_draw (ecs_iter_t *it)
 }
 
 static void
+system_draw (ecs_iter_t *it)
+{
+  bounds_c *bounds = ecs_field (it, bounds_c, 0);
+  origin_c *origin = ecs_field (it, origin_c, 1);
+  Sint8 sprite_id = 2;
+  sprite_c *sprite_opt = NULL;
+  if (ecs_field_is_set (it, sprite_id) == true)
+    {
+      sprite_opt = ecs_field (it, sprite_c, sprite_id);
+    }
+  Sint8 render_target_id = 3;
+  render_target_c *render_target_opt = NULL;
+  if (ecs_field_is_set (it, render_target_id) == true)
+    {
+      render_target_opt = ecs_field (it, render_target_c, render_target_id);
+    }
+  Sint8 pattern_id = 4;
+  pattern_c *pattern_opt = NULL;
+  if (ecs_field_is_set (it, pattern_id) == true)
+    {
+      pattern_opt = ecs_field (it, pattern_c, pattern_id);
+    }
+  Sint8 ngrid_id = 5;
+  ngrid_c *ngrid_opt = NULL;
+  if (ecs_field_is_set (it, ngrid_id) == true)
+    {
+      ngrid_opt = ecs_field (it, ngrid_c, ngrid_id);
+    }
+  Sint8 box_id = 6;
+  box_c *box_opt = NULL;
+  if (ecs_field_is_set (it, box_id) == true)
+    {
+      box_opt = ecs_field (it, box_c, box_id);
+    }
+  Sint8 margins_id = 7;
+  margins_c *margins_opt = NULL;
+  if (ecs_field_is_set (it, margins_id) == true)
+    {
+      margins_opt = ecs_field (it, margins_c, margins_id);
+    }
+  Sint8 text_id = 8;
+  text_c *text_opt = NULL;
+  if (ecs_field_is_set (it, text_id) == true)
+    {
+      text_opt = ecs_field (it, text_c, text_id);
+    }
+  Sint8 alpha_id = 9;
+  alpha_c *alpha_opt = NULL;
+  if (ecs_field_is_set (it, alpha_id) == true)
+    {
+      alpha_opt = ecs_field (it, alpha_c, alpha_id);
+    }
+  Sint8 color_id = 10;
+  color_c *color_opt = NULL;
+  if (ecs_field_is_set (it, color_id) == true)
+    {
+      color_opt = ecs_field (it, color_c, color_id);
+    }
+  Sint8 anim_player_id = 11;
+  anim_player_c *anim_player_opt = NULL;
+  if (ecs_field_is_set (it, anim_player_id) == true)
+    {
+      anim_player_opt = ecs_field (it, anim_player_c, anim_player_id);
+    }
+  Sint8 cache_id = 12;
+  cache_c *cache_opt = NULL;
+  if (ecs_field_is_set (it, cache_id) == true)
+    {
+      cache_opt = ecs_field (it, cache_c, cache_id);
+    }
+
+  const core_s *core = ecs_singleton_get (it->world, core_s);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (sprite_opt != NULL && &sprite_opt[i] != NULL)
+        {
+          if (sprite_opt[i].b_is_shown == false)
+            {
+              continue;
+            }
+          SDL_FRect dest = { .x = origin[i].world.x, .y = origin[i].world.y };
+
+          if (origin[i].b_can_be_scaled == true)
+            {
+              dest.x *= core->scale;
+              dest.y *= core->scale;
+            }
+          if (sprite_opt[i].b_overrides_bounds == true)
+            {
+
+              if (bounds[i].b_can_be_scaled == true)
+                {
+                  dest.x += (sprite_opt[i].offset.x * core->scale);
+                  dest.y += (sprite_opt[i].offset.y * core->scale);
+                }
+              else
+                {
+                  dest.x += sprite_opt[i].offset.x;
+                  dest.y += sprite_opt[i].offset.y;
+                }
+              dest.w = sprite_opt[i].over_size.x;
+              dest.h = sprite_opt[i].over_size.y;
+            }
+          else
+            {
+              dest.w = bounds[i].size.x;
+              dest.h = bounds[i].size.y;
+            }
+          if (bounds[i].b_can_be_scaled == true)
+            {
+              dest.w *= core->scale;
+              dest.h *= core->scale;
+            }
+          if (origin[i].b_is_center == true)
+            {
+              dest.x -= dest.w / 2;
+              dest.y -= dest.h / 2;
+            }
+          Uint8 sprite_r = 255u;
+          Uint8 sprite_g = 255u;
+          Uint8 sprite_b = 255u;
+          Uint8 sprite_alpha = 255u;
+          if (sprite_opt[i].b_uses_color == true)
+            {
+              if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+                {
+                  sprite_alpha = alpha_opt[i].value;
+                }
+              if (color_opt != NULL && &color_opt[i] != NULL)
+                {
+                  sprite_r = color_opt[i].r;
+                  sprite_g = color_opt[i].g;
+                  sprite_b = color_opt[i].b;
+                }
+            }
+
+          /* Enable a render target if needs be. */
+
+          if (cache_opt != NULL && &cache_opt[i] != NULL)
+            {
+              if (cache_opt[i].b_should_regenerate == false)
+                {
+                  continue;
+                }
+              render_target_switch (core->rend, core->rts,
+                                    cache_opt[i].cache_name);
+              cache_opt[i].b_should_regenerate = false;
+            }
+
+          struct satlas_render_color_params params = { .opacity = sprite_alpha,
+                                                       .tint_r = sprite_r,
+                                                       .tint_g = sprite_g,
+                                                       .tint_b = sprite_b };
+
+          if (anim_player_opt != NULL && &anim_player_opt[i] != NULL)
+            {
+              satlas_render_entry_subsection (core->atlas, sprite_opt[i].name,
+                                              &anim_player_opt[i].subsection,
+                                              &dest, &params);
+            }
+          else
+            {
+              satlas_render_entry (core->atlas, sprite_opt[i].name, &dest,
+                                   &params);
+            }
+
+          if (cache_opt != NULL && &cache_opt[i] != NULL)
+            {
+              render_target_switch (core->rend, core->rts, STRING_CTE (""));
+            }
+        }
+      if (render_target_opt != NULL && &render_target_opt[i] != NULL)
+        {
+          if (render_target_opt[i].b_is_shown == false)
+            {
+              continue;
+            }
+          SDL_FRect dest = { .x = origin[i].world.x, .y = origin[i].world.y };
+
+          if (origin[i].b_can_be_scaled == true)
+            {
+              dest.x *= core->scale;
+              dest.y *= core->scale;
+            }
+
+          dest.w = bounds[i].size.x;
+          dest.h = bounds[i].size.y;
+
+          if (bounds[i].b_can_be_scaled == true)
+            {
+              dest.w *= core->scale;
+              dest.h *= core->scale;
+            }
+          if (origin[i].b_is_center == true)
+            {
+              dest.x -= dest.w / 2;
+              dest.y -= dest.h / 2;
+            }
+          Uint8 rt_r = 255u;
+          Uint8 rt_g = 255u;
+          Uint8 rt_b = 255u;
+          Uint8 rt_a = 255u;
+          if (render_target_opt[i].b_uses_color == true)
+            {
+              if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+                {
+                  rt_a = alpha_opt[i].value;
+                }
+              if (color_opt != NULL && &color_opt[i] != NULL)
+                {
+                  rt_r = color_opt[i].r;
+                  rt_g = color_opt[i].g;
+                  rt_b = color_opt[i].b;
+                }
+            }
+
+          /* Enable a render target if needs be. */
+
+          if (cache_opt != NULL && &cache_opt[i] != NULL)
+            {
+              if (cache_opt[i].b_should_regenerate == false)
+                {
+                  continue;
+                }
+              render_target_switch (core->rend, core->rts,
+                                    cache_opt[i].cache_name);
+              cache_opt[i].b_should_regenerate = false;
+            }
+
+          struct satlas_render_color_params params = {
+            .opacity = rt_a, .tint_r = rt_r, .tint_g = rt_g, .tint_b = rt_b
+          };
+
+          const struct render_target *rt
+              = *dict_render_target_get (core->rts, render_target_opt[i].name);
+          SDL_RenderTexture (core->rend, rt->texture, NULL, &dest);
+
+          if (cache_opt != NULL && &cache_opt[i] != NULL)
+            {
+              render_target_switch (core->rend, core->rts, STRING_CTE (""));
+            }
+        }
+      if (pattern_opt != NULL && &pattern_opt[i] != NULL)
+        {
+          if (pattern_opt[i].b_is_shown == false)
+            {
+              continue;
+            }
+          SDL_FRect dest = { .x = origin[i].world.x, .y = origin[i].world.y };
+
+          if (origin[i].b_can_be_scaled == true)
+            {
+              dest.x *= core->scale;
+              dest.y *= core->scale;
+            }
+
+          dest.w = bounds[i].size.x;
+          dest.h = bounds[i].size.y;
+
+          if (bounds[i].b_can_be_scaled == true)
+            {
+              dest.w *= core->scale;
+              dest.h *= core->scale;
+            }
+          if (origin[i].b_is_center == true)
+            {
+              dest.x -= dest.w / 2;
+              dest.y -= dest.h / 2;
+            }
+          Uint8 pattern_r = 255u;
+          Uint8 pattern_g = 255u;
+          Uint8 pattern_b = 255u;
+          Uint8 pattern_a = 255u;
+          if (pattern_opt[i].b_uses_color == true)
+            {
+              if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+                {
+                  pattern_a = alpha_opt[i].value;
+                }
+              if (color_opt != NULL && &color_opt[i] != NULL)
+                {
+                  pattern_r = color_opt[i].r;
+                  pattern_g = color_opt[i].g;
+                  pattern_b = color_opt[i].b;
+                }
+            }
+
+          /* Enable a render target if needs be. */
+
+          if (cache_opt != NULL && &cache_opt[i] != NULL)
+            {
+              if (cache_opt[i].b_should_regenerate == false)
+                {
+                  continue;
+                }
+              render_target_switch (core->rend, core->rts,
+                                    cache_opt[i].cache_name);
+              cache_opt[i].b_should_regenerate = false;
+            }
+
+          struct satlas_render_color_params params = { .opacity = pattern_a,
+                                                       .tint_r = pattern_r,
+                                                       .tint_g = pattern_g,
+                                                       .tint_b = pattern_b };
+
+          satlas_render_entry_tiled (core->atlas, pattern_opt[i].name, &dest,
+                                     core->scale, &params);
+
+          if (cache_opt != NULL && &cache_opt[i] != NULL)
+            {
+              render_target_switch (core->rend, core->rts, STRING_CTE (""));
+            }
+        }
+      if (box_opt != NULL && &box_opt[i] != NULL)
+        {
+          if (box_opt[i].b_is_shown == false)
+            {
+              continue;
+            }
+          SDL_FRect dest = (SDL_FRect){ origin[i].world.x, origin[i].world.y,
+                                        bounds[i].size.x, bounds[i].size.y };
+
+          Uint8 box_r = 255u;
+          Uint8 box_g = 255u;
+          Uint8 box_b = 255u;
+          Uint8 box_alpha = 255u;
+          if (box_opt[i].b_uses_color == true)
+            {
+              if (color_opt != NULL && &color_opt[i] != NULL)
+                {
+                  box_r = color_opt[i].r;
+                  box_g = color_opt[i].g;
+                  box_b = color_opt[i].b;
+                }
+              if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+                {
+                  box_alpha = alpha_opt[i].value;
+                }
+            }
+          if (origin[i].b_can_be_scaled == true)
+            {
+              dest.x *= core->scale;
+              dest.y *= core->scale;
+            }
+          if (bounds[i].b_can_be_scaled == true)
+            {
+              dest.w *= core->scale;
+              dest.h *= core->scale;
+            }
+          if (origin[i].b_is_center == true)
+            {
+              dest.x -= dest.w / 2;
+              dest.y -= dest.h / 2;
+            }
+          SDL_SetRenderDrawColor (core->rend, box_r, box_g, box_b, box_alpha);
+          if (box_opt[i].b_is_filled == true)
+            {
+              SDL_RenderFillRect (core->rend, &dest);
+              continue;
+            }
+          SDL_RenderRect (core->rend, &dest);
+        }
+      if (margins_opt != NULL && &margins_opt[i] != NULL)
+        {
+          if (ngrid_opt != NULL && &ngrid_opt[i] != NULL)
+            {
+              if (ngrid_opt[i].b_is_shown == false)
+                {
+                  continue;
+                }
+              SDL_FRect dest
+                  = { .x = origin[i].world.x, .y = origin[i].world.y };
+
+              if (origin[i].b_can_be_scaled == true)
+                {
+                  dest.x *= core->scale;
+                  dest.y *= core->scale;
+                }
+
+              dest.w = bounds[i].size.x;
+              dest.h = bounds[i].size.y;
+
+              if (bounds[i].b_can_be_scaled == true)
+                {
+                  dest.w *= core->scale;
+                  dest.h *= core->scale;
+                }
+              if (origin[i].b_is_center == true)
+                {
+                  dest.x -= dest.w / 2;
+                  dest.y -= dest.h / 2;
+                }
+              Uint8 ngrid_r = 255u;
+              Uint8 ngrid_g = 255u;
+              Uint8 ngrid_b = 255u;
+              Uint8 ngrid_a = 255u;
+              if (ngrid_opt[i].b_uses_color == true)
+                {
+                  if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+                    {
+                      ngrid_a = alpha_opt[i].value;
+                    }
+                  if (color_opt != NULL && &color_opt[i] != NULL)
+                    {
+                      ngrid_r = color_opt[i].r;
+                      ngrid_g = color_opt[i].g;
+                      ngrid_b = color_opt[i].b;
+                    }
+                }
+
+              /* Enable a render target if needs be. */
+              if (cache_opt != NULL && &cache_opt[i] != NULL)
+                {
+                  if (cache_opt[i].b_should_regenerate == false)
+                    {
+                      continue;
+                    }
+                  render_target_switch (core->rend, core->rts,
+                                        cache_opt[i].cache_name);
+                  cache_opt[i].b_should_regenerate = false;
+                }
+
+              struct satlas_render_color_params params = { .opacity = ngrid_a,
+                                                           .tint_r = ngrid_r,
+                                                           .tint_g = ngrid_g,
+                                                           .tint_b = ngrid_b };
+
+              satlas_render_entry_ngrid (
+                  core->atlas, ngrid_opt[i].name, &margins_opt[i].value,
+                  core->scale, &dest, &params, ngrid_opt[i].b_tiled_edges);
+
+              if (cache_opt != NULL && &cache_opt[i] != NULL)
+                {
+                  render_target_switch (core->rend, core->rts,
+                                        STRING_CTE (""));
+                }
+            }
+          if (margins_opt[i].b_is_shown == false)
+            {
+              continue;
+            }
+          SDL_FPoint pos = origin[i].world;
+          SDL_FPoint size = bounds[i].size;
+          struct margins_ngrid margins_values
+              = { margins_opt[i].value.top, margins_opt[i].value.left,
+                  margins_opt[i].value.bottom, margins_opt[i].value.right };
+
+          if (margins_values.top == 0.f && margins_values.left == 0.f
+              && margins_values.bottom == 0.f && margins_values.right == 0.f)
+            {
+              continue;
+            }
+          if (origin[i].b_can_be_scaled == true)
+            {
+              pos.x *= core->scale;
+              pos.y *= core->scale;
+            }
+          if (bounds[i].b_can_be_scaled == true)
+            {
+              size.x *= core->scale;
+              size.y *= core->scale;
+              margins_values.top *= core->scale;
+              margins_values.left *= core->scale;
+              margins_values.bottom *= core->scale;
+              margins_values.right *= core->scale;
+            }
+
+          const float offset = 0.f;
+
+          /* Corners are specified from top-left counter clock-wise. */
+          SDL_FRect top_left_corner
+              = (SDL_FRect){ pos.x, pos.y, margins_values.left,
+                             margins_values.top };
+
+          SDL_FRect top_right_corner
+              = (SDL_FRect){ pos.x + size.x - margins_values.right, pos.y,
+                             margins_values.right, margins_values.top };
+
+          SDL_FRect bottom_left_corner
+              = (SDL_FRect){ pos.x, pos.y + size.y - margins_values.bottom,
+                             margins_values.left, margins_values.bottom };
+
+          SDL_FRect bottom_right_corner
+              = (SDL_FRect){ pos.x + size.x - margins_values.right,
+                             pos.y + size.y - margins_values.bottom,
+                             margins_values.right, margins_values.bottom };
+
+          /* Edges are specified in a WASD configuration. */
+          SDL_FRect top_edge_rect
+              = (SDL_FRect){ pos.x + margins_values.left, pos.y,
+                             size.x - (margins_values.right * 2),
+                             margins_values.top };
+
+          SDL_FRect left_edge_rect = (SDL_FRect){
+            pos.x, pos.y + margins_values.top, margins_values.left,
+            size.y - margins_values.bottom - margins_values.top
+          };
+
+          SDL_FRect bottom_edge_rect
+              = (SDL_FRect){ pos.x + margins_values.left,
+                             pos.y + size.y - margins_values.bottom,
+                             size.x - (margins_values.right * 2),
+                             margins_values.bottom };
+
+          SDL_FRect right_edge_rect
+              = (SDL_FRect){ pos.x + size.x - margins_values.right,
+                             pos.y + margins_values.top, margins_values.right,
+                             size.y - margins_values.bottom
+                                 - margins_values.top };
+
+          top_left_corner.x += offset;
+          top_left_corner.y += offset;
+          top_left_corner.w -= offset;
+          top_left_corner.h -= offset;
+
+          top_right_corner.x += offset;
+          top_right_corner.y += offset;
+          top_right_corner.w -= offset * 2;
+          top_right_corner.h -= offset;
+
+          bottom_left_corner.x += offset;
+          bottom_left_corner.y += offset;
+          bottom_left_corner.w -= offset;
+          bottom_left_corner.h -= offset * 2;
+
+          bottom_right_corner.x += offset;
+          bottom_right_corner.y += offset;
+          bottom_right_corner.w -= offset * 2;
+          bottom_right_corner.h -= offset * 2;
+
+          top_edge_rect.x += offset;
+          top_edge_rect.y += offset;
+          top_edge_rect.w -= offset;
+          top_edge_rect.h -= offset;
+
+          left_edge_rect.x += offset;
+          left_edge_rect.y += offset;
+          left_edge_rect.w -= offset;
+          left_edge_rect.h -= offset;
+
+          bottom_edge_rect.x += offset;
+          bottom_edge_rect.y += offset;
+          bottom_edge_rect.w -= offset;
+          bottom_edge_rect.h -= offset * 2;
+
+          right_edge_rect.x += offset;
+          right_edge_rect.y += offset;
+          right_edge_rect.w -= offset * 2;
+          right_edge_rect.h -= offset;
+
+          SDL_SetRenderDrawColor (
+              core->rend, margins_opt[i].corner_r, margins_opt[i].corner_g,
+              margins_opt[i].corner_b, margins_opt[i].corner_a);
+
+          SDL_RenderRect (core->rend, &top_left_corner);
+          SDL_RenderRect (core->rend, &top_right_corner);
+          SDL_RenderRect (core->rend, &bottom_left_corner);
+          SDL_RenderRect (core->rend, &bottom_right_corner);
+
+          SDL_SetRenderDrawColor (core->rend, margins_opt[i].edge_r,
+                                  margins_opt[i].edge_g, margins_opt[i].edge_b,
+                                  margins_opt[i].edge_a);
+
+          SDL_RenderRect (core->rend, &top_edge_rect);
+          SDL_RenderRect (core->rend, &bottom_edge_rect);
+          SDL_RenderRect (core->rend, &left_edge_rect);
+          SDL_RenderRect (core->rend, &right_edge_rect);
+        }
+      if (text_opt != NULL && &text_opt[i] != NULL)
+        {
+          if (text_opt[i].b_is_shown == false)
+            {
+              continue;
+            }
+          Uint8 text_r = 255u;
+          Uint8 text_g = 255u;
+          Uint8 text_b = 255u;
+          Uint8 alpha = 255u;
+          if (text_opt[i].b_uses_color == true)
+            {
+              if (color_opt != NULL && &color_opt[i] != NULL)
+                {
+                  text_r = color_opt[i].r;
+                  text_g = color_opt[i].g;
+                  text_b = color_opt[i].b;
+                }
+              if (alpha_opt != NULL && &alpha_opt[i] != NULL)
+                {
+                  alpha = alpha_opt[i].value;
+                }
+            }
+          SDL_FPoint dest = origin[i].world;
+          if (origin[i].b_can_be_scaled == true)
+            {
+              dest.x *= core->scale;
+              dest.y *= core->scale;
+            }
+          struct text_params params = { .size = text_opt[i].font_size,
+                                        .tint_r = text_r,
+                                        .tint_g = text_g,
+                                        .tint_b = text_b,
+                                        .alpha = alpha,
+                                        .face = "baby_jeepers",
+                                        .location = dest,
+                                        .align_h = text_opt[i].align_h,
+                                        .align_v = text_opt[i].align_v };
+          text_man_render_string (core->text_man, &params,
+                                  text_opt[i].content);
+        }
+    }
+}
+
+static void
 system_sprite_draw (ecs_iter_t *it)
 {
   sprite_c *sprite = ecs_field (it, sprite_c, 0);
@@ -1687,9 +2330,9 @@ init_pluto_systems (ecs_world_t *ecs)
                              .add = ecs_ids (ecs_dependson (
                                  ecs_lookup (ecs, "pre_render_phase"))) });
     ecs_query_desc_t query = { .terms = { { .id = ecs_id (origin_c) } } };
-    ecs_system (ecs, { .entity = ent,
-                       .query = query,
-                       .callback = system_origin_bind });
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = system_origin_bind });
   }
   {
     ecs_entity_t ent
@@ -1770,109 +2413,149 @@ init_pluto_systems (ecs_world_t *ecs)
   {
     ecs_entity_t ent = ecs_entity (
         ecs,
-        { .name = "system_box_draw",
+        { .name = "system_draw",
           .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
     ecs_query_desc_t query
-        = { .terms = { { .id = ecs_id (box_c) },
-                       { .id = ecs_id (bounds_c) },
+        = { .terms = { { .id = ecs_id (bounds_c) },
                        { .id = ecs_id (origin_c) },
-                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
-                       { .id = ecs_id (color_c), .oper = EcsOptional } } };
-    ecs_system (
-        ecs, { .entity = ent, .query = query, .callback = system_box_draw });
-  }
-  {
-    ecs_entity_t ent = ecs_entity (
-        ecs,
-        { .name = "system_margins_draw",
-          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
-    ecs_query_desc_t query = { .terms = { { .id = ecs_id (margins_c) },
-                                          { .id = ecs_id (origin_c) },
-                                          { .id = ecs_id (bounds_c) } } };
-    ecs_system (
-        ecs,
-        { .entity = ent, .query = query, .callback = system_margins_draw });
-  }
-  {
-    ecs_entity_t ent = ecs_entity (
-        ecs,
-        { .name = "system_ngrid_draw",
-          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
-    ecs_query_desc_t query
-        = { .terms = { { .id = ecs_id (ngrid_c) },
-                       { .id = ecs_id (bounds_c) },
-                       { .id = ecs_id (origin_c) },
-                       { .id = ecs_id (margins_c) },
+                       { .id = ecs_id (sprite_c), .oper = EcsOptional },
+                       { .id = ecs_id (render_target_c), .oper = EcsOptional },
+                       { .id = ecs_id (pattern_c), .oper = EcsOptional },
+                       { .id = ecs_id (ngrid_c), .oper = EcsOptional },
+                       { .id = ecs_id (box_c), .oper = EcsOptional },
+                       { .id = ecs_id (margins_c), .oper = EcsOptional },
+                       { .id = ecs_id (text_c), .oper = EcsOptional },
                        { .id = ecs_id (alpha_c), .oper = EcsOptional },
                        { .id = ecs_id (color_c), .oper = EcsOptional },
                        { .id = ecs_id (anim_player_c), .oper = EcsOptional },
-                       { .id = ecs_id (cache_c), .oper = EcsOptional } } };
-    ecs_system (
-        ecs, { .entity = ent, .query = query, .callback = system_ngrid_draw });
+                       { .id = ecs_id (cache_c), .oper = EcsOptional },
+                       { .id = ecs_id (layer_c) } },
+            .order_by = ecs_id (layer_c),
+            .order_by_callback = order_by_layer };
+    ecs_system (ecs,
+                { .entity = ent, .query = query, .callback = system_draw });
   }
-  {
-    ecs_entity_t ent = ecs_entity (
-        ecs,
-        { .name = "system_pattern_draw",
-          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
-    ecs_query_desc_t query
-        = { .terms = { { .id = ecs_id (pattern_c) },
-                       { .id = ecs_id (bounds_c) },
-                       { .id = ecs_id (origin_c) },
-                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
-                       { .id = ecs_id (color_c), .oper = EcsOptional },
-                       { .id = ecs_id (anim_player_c), .oper = EcsOptional },
-                       { .id = ecs_id (cache_c), .oper = EcsOptional } } };
-    ecs_system (
-        ecs,
-        { .entity = ent, .query = query, .callback = system_pattern_draw });
-  }
-  {
-    ecs_entity_t ent = ecs_entity (
-        ecs,
-        { .name = "system_sprite_draw",
-          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
-    ecs_query_desc_t query
-        = { .terms = { { .id = ecs_id (sprite_c) },
-                       { .id = ecs_id (bounds_c) },
-                       { .id = ecs_id (origin_c) },
-                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
-                       { .id = ecs_id (color_c), .oper = EcsOptional },
-                       { .id = ecs_id (anim_player_c), .oper = EcsOptional },
-                       { .id = ecs_id (cache_c), .oper = EcsOptional } } };
-    ecs_system (
-        ecs,
-        { .entity = ent, .query = query, .callback = system_sprite_draw });
-  }
-  {
-    ecs_entity_t ent = ecs_entity (
-        ecs,
-        { .name = "system_text_draw",
-          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
-    ecs_query_desc_t query
-        = { .terms = { { .id = ecs_id (text_c) },
-                       { .id = ecs_id (origin_c) },
-                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
-                       { .id = ecs_id (color_c), .oper = EcsOptional } } };
-    ecs_system (
-        ecs, { .entity = ent, .query = query, .callback = system_text_draw });
-  }
-  {
-    ecs_entity_t ent = ecs_entity (
-        ecs,
-        { .name = "system_render_target_draw",
-          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
-    ecs_query_desc_t query
-        = { .terms = { { .id = ecs_id (render_target_c) },
-                       { .id = ecs_id (bounds_c) },
-                       { .id = ecs_id (origin_c) },
-                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
-                       { .id = ecs_id (color_c), .oper = EcsOptional },
-                       { .id = ecs_id (cache_c), .oper = EcsOptional } } };
-    ecs_system (ecs, { .entity = ent,
-                       .query = query,
-                       .callback = system_render_target_draw });
-  }
+  //  {
+  //    ecs_entity_t ent = ecs_entity (
+  //        ecs,
+  //        { .name = "system_box_draw",
+  //          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase")))
+  //          });
+  //    ecs_query_desc_t query
+  //        = { .terms = { { .id = ecs_id (box_c) },
+  //                       { .id = ecs_id (bounds_c) },
+  //                       { .id = ecs_id (origin_c) },
+  //                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (color_c), .oper = EcsOptional } } };
+  //    ecs_system (
+  //        ecs, { .entity = ent, .query = query, .callback = system_box_draw
+  //        });
+  //  }
+  //  {
+  //    ecs_entity_t ent = ecs_entity (
+  //        ecs,
+  //        { .name = "system_margins_draw",
+  //          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase")))
+  //          });
+  //    ecs_query_desc_t query = { .terms = { { .id = ecs_id (margins_c) },
+  //                                          { .id = ecs_id (origin_c) },
+  //                                          { .id = ecs_id (bounds_c) } } };
+  //    ecs_system (
+  //        ecs,
+  //        { .entity = ent, .query = query, .callback = system_margins_draw
+  //        });
+  //  }
+  //  {
+  //    ecs_entity_t ent = ecs_entity (
+  //        ecs,
+  //        { .name = "system_ngrid_draw",
+  //          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase")))
+  //          });
+  //    ecs_query_desc_t query
+  //        = { .terms = { { .id = ecs_id (ngrid_c) },
+  //                       { .id = ecs_id (bounds_c) },
+  //                       { .id = ecs_id (origin_c) },
+  //                       { .id = ecs_id (margins_c) },
+  //                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (color_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (anim_player_c), .oper = EcsOptional
+  //                       }, { .id = ecs_id (cache_c), .oper = EcsOptional } }
+  //                       };
+  //    ecs_system (
+  //        ecs, { .entity = ent, .query = query, .callback = system_ngrid_draw
+  //        });
+  //  }
+  //  {
+  //    ecs_entity_t ent = ecs_entity (
+  //        ecs,
+  //        { .name = "system_pattern_draw",
+  //          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase")))
+  //          });
+  //    ecs_query_desc_t query
+  //        = { .terms = { { .id = ecs_id (pattern_c) },
+  //                       { .id = ecs_id (bounds_c) },
+  //                       { .id = ecs_id (origin_c) },
+  //                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (color_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (anim_player_c), .oper = EcsOptional
+  //                       }, { .id = ecs_id (cache_c), .oper = EcsOptional } }
+  //                       };
+  //    ecs_system (
+  //        ecs,
+  //        { .entity = ent, .query = query, .callback = system_pattern_draw
+  //        });
+  //  }
+  //  {
+  //    ecs_entity_t ent = ecs_entity (
+  //        ecs,
+  //        { .name = "system_sprite_draw",
+  //          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase")))
+  //          });
+  //    ecs_query_desc_t query
+  //        = { .terms = { { .id = ecs_id (sprite_c) },
+  //                       { .id = ecs_id (bounds_c) },
+  //                       { .id = ecs_id (origin_c) },
+  //                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (color_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (anim_player_c), .oper = EcsOptional
+  //                       }, { .id = ecs_id (cache_c), .oper = EcsOptional } }
+  //                       };
+  //    ecs_system (
+  //        ecs,
+  //        { .entity = ent, .query = query, .callback = system_sprite_draw });
+  //  }
+  //  {
+  //    ecs_entity_t ent = ecs_entity (
+  //        ecs,
+  //        { .name = "system_text_draw",
+  //          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase")))
+  //          });
+  //    ecs_query_desc_t query
+  //        = { .terms = { { .id = ecs_id (text_c) },
+  //                       { .id = ecs_id (origin_c) },
+  //                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (color_c), .oper = EcsOptional } } };
+  //    ecs_system (
+  //        ecs, { .entity = ent, .query = query, .callback = system_text_draw
+  //        });
+  //  }
+  //  {
+  //    ecs_entity_t ent = ecs_entity (
+  //        ecs,
+  //        { .name = "system_render_target_draw",
+  //          .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase")))
+  //          });
+  //    ecs_query_desc_t query
+  //        = { .terms = { { .id = ecs_id (render_target_c) },
+  //                       { .id = ecs_id (bounds_c) },
+  //                       { .id = ecs_id (origin_c) },
+  //                       { .id = ecs_id (alpha_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (color_c), .oper = EcsOptional },
+  //                       { .id = ecs_id (cache_c), .oper = EcsOptional } } };
+  //    ecs_system (ecs, { .entity = ent,
+  //                       .query = query,
+  //                       .callback = system_render_target_draw });
+  //  }
 }
 
 static void
@@ -1933,6 +2616,9 @@ init_pluto_hooks (ecs_world_t *ecs)
 
   ecs_type_hooks_t hover_hooks = { .ctor = hover };
   ecs_set_hooks_id (ecs, ecs_id (hover_c), &hover_hooks);
+
+  ecs_type_hooks_t layer_hooks = { .ctor = layer };
+  ecs_set_hooks_id (ecs, ecs_id (layer_c), &layer_hooks);
 
   ecs_type_hooks_t index_hooks = { .ctor = index };
   ecs_set_hooks_id (ecs, ecs_id (index_c), &index_hooks);
@@ -2033,6 +2719,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, color_c);
   ECS_COMPONENT_DEFINE (ecs, drag_c);
   ECS_COMPONENT_DEFINE (ecs, hover_c);
+  ECS_COMPONENT_DEFINE (ecs, layer_c);
   ECS_COMPONENT_DEFINE (ecs, index_c);
   ECS_COMPONENT_DEFINE (ecs, mat2d_c);
   ECS_COMPONENT_DEFINE (ecs, mat3d_c);
