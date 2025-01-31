@@ -43,7 +43,6 @@ array (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   array_c *array = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      arr_entity_init (array[i].content);
     }
 }
 
@@ -102,7 +101,7 @@ cache (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   cache_c *cache = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      cache[i].b_should_regenerate = false;
+      cache[i].b_should_regenerate = true;
     }
 }
 
@@ -190,7 +189,6 @@ mat2d (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   mat2d_c *mat2d = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      mat2d_entity_init (mat2d[i].content);
     }
 }
 
@@ -200,7 +198,6 @@ mat3d (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   mat3d_c *mat3d = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      mat3d_entity_init (mat3d[i].content);
     }
 }
 
@@ -366,6 +363,7 @@ task_get_window_size (ecs_iter_t *it)
 static void
 system_anim_player_advance (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Advance> anim player system!");
   anim_player_c *anim_player = ecs_field (it, anim_player_c, 0);
 
   for (Sint32 i = 0; i < it->count; i++)
@@ -407,6 +405,8 @@ system_anim_player_advance (ecs_iter_t *it)
 static void
 system_anim_player_assign_sprite_name (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM,
+             "Entered <Assign Sprite Name> anim player system!");
   anim_player_c *anim_player = ecs_field (it, anim_player_c, 0);
   sprite_c *sprite = ecs_field (it, sprite_c, 1);
 
@@ -424,6 +424,7 @@ system_anim_player_assign_sprite_name (ecs_iter_t *it)
 static void
 system_anim_player_set_subsection (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Set Subsection> anim player system!");
   anim_player_c *anim_player = ecs_field (it, anim_player_c, 0);
 
   for (Sint32 i = 0; i < it->count; i++)
@@ -446,6 +447,7 @@ system_anim_player_set_subsection (ecs_iter_t *it)
 static void
 system_bounds_bind (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Bind> bounds system!");
   bounds_c *bounds = ecs_field (it, bounds_c, 0);
   for (Sint32 i = 0; i < it->count; i++)
     {
@@ -471,6 +473,7 @@ system_bounds_bind (ecs_iter_t *it)
 static void
 system_box_draw (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Draw> box system!");
   box_c *box = ecs_field (it, box_c, 0);
 
   bounds_c *bounds = ecs_field (it, bounds_c, 1);
@@ -545,6 +548,7 @@ system_box_draw (ecs_iter_t *it)
 static void
 system_click_toggle (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Toggle> click system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
   struct custom_input_data *custom_data = core->input_man->custom_data;
   if (custom_data->b_is_dragging_widget == true
@@ -574,6 +578,7 @@ system_click_toggle (ecs_iter_t *it)
 static void
 system_color_set (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Set> color system!");
   color_c *color = ecs_field (it, color_c, 0);
   Sint8 hover_id = 1;
   hover_c *hover = NULL;
@@ -618,6 +623,7 @@ system_color_set (ecs_iter_t *it)
 void
 system_drag_apply_delta (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Apply Delta> drag system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
   struct custom_input_data *custom_data = core->input_man->custom_data;
   if (custom_data->b_is_resizing_widget == true)
@@ -658,6 +664,7 @@ system_drag_apply_delta (ecs_iter_t *it)
 static void
 system_hover_toggle (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Toggle> hover system!");
   hover_c *hover = ecs_field (it, hover_c, 0);
 
   origin_c *origin = ecs_field (it, origin_c, 1);
@@ -704,6 +711,7 @@ system_hover_toggle (ecs_iter_t *it)
 void
 system_margins_check_handles (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Check Handles> margins system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
   const struct input_man *input_man = core->input_man;
 
@@ -807,6 +815,7 @@ system_margins_check_handles (ecs_iter_t *it)
 void
 system_margins_draw (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Draw> margins system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
 
   margins_c *margins = ecs_field (it, margins_c, 0);
@@ -949,6 +958,7 @@ system_margins_draw (ecs_iter_t *it)
 static void
 system_ngrid_draw (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Draw> ngrid system!");
   ngrid_c *ngrid = ecs_field (it, ngrid_c, 0);
 
   bounds_c *bounds = ecs_field (it, bounds_c, 1);
@@ -1033,7 +1043,7 @@ system_ngrid_draw (ecs_iter_t *it)
             {
               continue;
             }
-          render_target_switch (NULL, cache_opt[i].cache_name);
+          render_target_switch (core->rts, cache_opt[i].cache_name);
           cache_opt[i].b_should_regenerate = false;
         }
 
@@ -1048,7 +1058,7 @@ system_ngrid_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          render_target_switch (NULL, STRING_CTE (""));
+          render_target_switch (core->rts, STRING_CTE (""));
         }
     }
 }
@@ -1056,6 +1066,7 @@ system_ngrid_draw (ecs_iter_t *it)
 static void
 system_origin_bind (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Bind> origin system!");
   origin_c *origin = ecs_field (it, origin_c, 0);
   for (Sint32 i = 0; i < it->count; i++)
     {
@@ -1081,6 +1092,7 @@ system_origin_bind (ecs_iter_t *it)
 void
 system_resize_apply_delta (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Apply Delta> resize system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
   struct custom_input_data *custom_data = core->input_man->custom_data;
   if (custom_data->b_is_dragging_widget == true)
@@ -1209,6 +1221,7 @@ system_resize_apply_delta (ecs_iter_t *it)
 static void
 system_origin_calc_world (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Calc World> origin system!");
   origin_c *origin = ecs_field (it, origin_c, 0);
   Sint8 p_origin_id = 1;
   origin_c *p_origin = NULL;
@@ -1235,6 +1248,7 @@ system_origin_calc_world (ecs_iter_t *it)
 static void
 system_pattern_draw (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Draw> pattern system!");
   pattern_c *pattern = ecs_field (it, pattern_c, 0);
 
   bounds_c *bounds = ecs_field (it, bounds_c, 1);
@@ -1319,7 +1333,7 @@ system_pattern_draw (ecs_iter_t *it)
             {
               continue;
             }
-          render_target_switch (NULL, cache_opt[i].cache_name);
+          render_target_switch (core->rts, cache_opt[i].cache_name);
           cache_opt[i].b_should_regenerate = false;
         }
 
@@ -1333,7 +1347,7 @@ system_pattern_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          render_target_switch (NULL, STRING_CTE (""));
+          render_target_switch (core->rts, STRING_CTE (""));
         }
     }
 }
@@ -1341,6 +1355,7 @@ system_pattern_draw (ecs_iter_t *it)
 static void
 system_render_target_draw (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Draw> render_target system!");
   render_target_c *render_target = ecs_field (it, render_target_c, 0);
 
   bounds_c *bounds = ecs_field (it, bounds_c, 1);
@@ -1419,7 +1434,7 @@ system_render_target_draw (ecs_iter_t *it)
             {
               continue;
             }
-          render_target_switch (NULL, cache_opt[i].cache_name);
+          render_target_switch (core->rts, cache_opt[i].cache_name);
           cache_opt[i].b_should_regenerate = false;
         }
 
@@ -1433,7 +1448,7 @@ system_render_target_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          render_target_switch (NULL, STRING_CTE (""));
+          render_target_switch (core->rts, STRING_CTE (""));
         }
     }
 }
@@ -1441,6 +1456,7 @@ system_render_target_draw (ecs_iter_t *it)
 static void
 system_draw (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Draw> system!");
   bounds_c *bounds = ecs_field (it, bounds_c, 0);
   origin_c *origin = ecs_field (it, origin_c, 1);
   Sint8 sprite_id = 2;
@@ -1584,7 +1600,7 @@ system_draw (ecs_iter_t *it)
                 {
                   continue;
                 }
-              render_target_switch (NULL, cache_opt[i].cache_name);
+              render_target_switch (core->rts, cache_opt[i].cache_name);
               cache_opt[i].b_should_regenerate = false;
             }
 
@@ -1607,7 +1623,7 @@ system_draw (ecs_iter_t *it)
 
           if (cache_opt != NULL && &cache_opt[i] != NULL)
             {
-              render_target_switch (NULL, STRING_CTE (""));
+              render_target_switch (core->rts, STRING_CTE (""));
             }
         }
       if (render_target_opt != NULL && &render_target_opt[i] != NULL)
@@ -1663,7 +1679,7 @@ system_draw (ecs_iter_t *it)
                 {
                   continue;
                 }
-              render_target_switch (NULL, cache_opt[i].cache_name);
+              render_target_switch (core->rts, cache_opt[i].cache_name);
               cache_opt[i].b_should_regenerate = false;
             }
 
@@ -1671,13 +1687,13 @@ system_draw (ecs_iter_t *it)
             .opacity = rt_a, .tint_r = rt_r, .tint_g = rt_g, .tint_b = rt_b
           };
 
-          const struct render_target *rt
-              = *dict_render_target_get (core->rts->dict, render_target_opt[i].name);
+          const struct render_target *rt = *dict_render_target_get (
+              core->rts->dict, render_target_opt[i].name);
           SDL_RenderTexture (core->rend, rt->texture, NULL, &dest);
 
           if (cache_opt != NULL && &cache_opt[i] != NULL)
             {
-              render_target_switch (NULL, STRING_CTE (""));
+              render_target_switch (core->rts, STRING_CTE (""));
             }
         }
       if (pattern_opt != NULL && &pattern_opt[i] != NULL)
@@ -1733,7 +1749,7 @@ system_draw (ecs_iter_t *it)
                 {
                   continue;
                 }
-              render_target_switch (NULL, cache_opt[i].cache_name);
+              render_target_switch (core->rts, cache_opt[i].cache_name);
               cache_opt[i].b_should_regenerate = false;
             }
 
@@ -1747,7 +1763,7 @@ system_draw (ecs_iter_t *it)
 
           if (cache_opt != NULL && &cache_opt[i] != NULL)
             {
-              render_target_switch (NULL, STRING_CTE (""));
+              render_target_switch (core->rts, STRING_CTE (""));
             }
         }
       if (box_opt != NULL && &box_opt[i] != NULL)
@@ -1854,7 +1870,7 @@ system_draw (ecs_iter_t *it)
                     {
                       continue;
                     }
-                  render_target_switch (NULL, cache_opt[i].cache_name);
+                  render_target_switch (core->rts, cache_opt[i].cache_name);
                   cache_opt[i].b_should_regenerate = false;
                 }
 
@@ -1869,7 +1885,7 @@ system_draw (ecs_iter_t *it)
 
               if (cache_opt != NULL && &cache_opt[i] != NULL)
                 {
-                  render_target_switch (NULL, STRING_CTE (""));
+                  render_target_switch (core->rts, STRING_CTE (""));
                 }
             }
           if (margins_opt[i].b_is_shown == false)
@@ -2050,6 +2066,7 @@ system_draw (ecs_iter_t *it)
 static void
 system_sprite_draw (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Draw> sprite system!");
   sprite_c *sprite = ecs_field (it, sprite_c, 0);
 
   bounds_c *bounds = ecs_field (it, bounds_c, 1);
@@ -2151,7 +2168,7 @@ system_sprite_draw (ecs_iter_t *it)
             {
               continue;
             }
-          render_target_switch (NULL, cache_opt[i].cache_name);
+          render_target_switch (core->rts, cache_opt[i].cache_name);
           cache_opt[i].b_should_regenerate = false;
         }
 
@@ -2173,7 +2190,7 @@ system_sprite_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          render_target_switch (NULL, STRING_CTE (""));
+          render_target_switch (core->rts, STRING_CTE (""));
         }
     }
 }
@@ -2181,6 +2198,7 @@ system_sprite_draw (ecs_iter_t *it)
 static void
 system_text_draw (ecs_iter_t *it)
 {
+  log_debug (DEBUG_LOG_SPAM, "Entered <Draw> text system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
 
   text_c *text = ecs_field (it, text_c, 0);
@@ -2671,8 +2689,7 @@ init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
   core->scale = 1.f;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
 
-  render_target_init(core->rend, &core->rts);
-
+  render_target_init (core->rend, &core->rts);
   satlas_init (core->rend, &core->atlas);
 
   text_man_create_font_book (&core->text_man, core->rend);
