@@ -1879,10 +1879,18 @@ system_draw (ecs_iter_t *it)
                                                            .tint_g = ngrid_g,
                                                            .tint_b = ngrid_b };
 
-              satlas_render_entry_ngrid (
-                  core->atlas, ngrid_opt[i].name, &margins_opt[i].value,
-                  core->scale, &dest, &params, ngrid_opt[i].b_tiled_edges);
-
+              if (bounds[i].b_can_be_scaled == true)
+                {
+                  satlas_render_entry_ngrid (
+                      core->atlas, ngrid_opt[i].name, &margins_opt[i].value,
+                      core->scale, &dest, &params, ngrid_opt[i].b_tiled_edges);
+                }
+              else
+                {
+                  satlas_render_entry_ngrid (
+                      core->atlas, ngrid_opt[i].name, &margins_opt[i].value,
+                      1.f, &dest, &params, ngrid_opt[i].b_tiled_edges);
+                }
               if (cache_opt != NULL && &cache_opt[i] != NULL)
                 {
                   render_target_switch (core->rts, STRING_CTE (""));
