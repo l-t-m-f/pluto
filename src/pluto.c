@@ -232,7 +232,8 @@ movement (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
     {
       movement[i].delta.x = 0;
       movement[i].delta.y = 0;
-      movement[i].cooldown = 5;
+      movement[i].default_cooldown = 5;
+      movement[i].cooldown = movement[i].default_cooldown;
     }
 }
 
@@ -747,6 +748,30 @@ system_margins_check_handles (ecs_iter_t *it)
         {
           margins[i].current_handle = MARGIN_HANDLE_NONE;
         }
+    }
+}
+
+static void
+system_movement_apply_delta (ecs_iter_t *it)
+{
+  movement_c *movement = ecs_field (it, movement_c, 0);
+  index_c *index = ecs_field (it, index_c, 1);
+
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (movement[i].cooldown > 0)
+        {
+          movement[i].cooldown--;
+          movement[i].delta.x = 0;
+          movement[i].delta.y = 0;
+          continue;
+        }
+      index[i].x += movement[i].delta.x;
+      index[i].y += movement[i].delta.y;
+      movement[i].delta.x = 0;
+      movement[i].delta.y = 0;
+
+      movement[i].cooldown = movement[i].default_cooldown;
     }
 }
 
@@ -1613,6 +1638,17 @@ init_pluto_systems (ecs_world_t *ecs)
 
   /******************************************
    ******************************************/
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_movement_apply_delta",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (movement_c) },
+                                          { .id = ecs_id (index_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_movement_apply_delta });
+  }
   {
     ecs_entity_t ent
         = ecs_entity (ecs, { .name = "system_bounds_bind",

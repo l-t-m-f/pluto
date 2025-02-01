@@ -203,6 +203,7 @@ typedef struct component_margins
 typedef struct component_movement
 {
   SDL_Point delta;
+  Sint32 default_cooldown;
   Sint32 cooldown;
 } movement_c;
 
