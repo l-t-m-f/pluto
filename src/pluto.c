@@ -931,6 +931,22 @@ system_resize_apply_delta (ecs_iter_t *it)
 }
 
 static void
+system_text_bind (ecs_iter_t *it)
+{
+  log_debug (DEBUG_LOG_SPAM, "Entered <Bind> text system!");
+  text_c *text = ecs_field (it, text_c, 0);
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (text[i].content_binding != NULL)
+        {
+          text[i].content_binding (it->entities[i], it->world,
+                                   text[i].content);
+          continue;
+        }
+    }
+}
+
+static void
 system_origin_calc_world (ecs_iter_t *it)
 {
   log_debug (DEBUG_LOG_SPAM, "Entered <Calc World> origin system!");
@@ -1658,6 +1674,15 @@ init_pluto_systems (ecs_world_t *ecs)
     ecs_system (
         ecs,
         { .entity = ent, .query = query, .callback = system_bounds_bind });
+  }
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_text_bind",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (text_c) } } };
+    ecs_system (
+        ecs, { .entity = ent, .query = query, .callback = system_text_bind });
   }
   {
     ecs_entity_t ent
