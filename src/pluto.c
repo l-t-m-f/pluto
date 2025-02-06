@@ -33,6 +33,7 @@ ECS_COMPONENT_DECLARE (render_target_c);
 ECS_COMPONENT_DECLARE (resize_c);
 ECS_COMPONENT_DECLARE (sprite_c);
 ECS_COMPONENT_DECLARE (text_c);
+ECS_COMPONENT_DECLARE (visibility_c);
 
 /******************************/
 /*********** Hooks ************/
@@ -328,6 +329,17 @@ text (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
       text[i].font_size = 5u;
       text[i].b_is_shown = true;
       text[i].b_uses_color = false;
+    }
+}
+
+static void
+visibility (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  visibility_c *visibility = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      visibility[i].b_state = true;
+      visibility[i].state_binding = NULL;
     }
 }
 
@@ -969,6 +981,22 @@ system_origin_calc_world (ecs_iter_t *it)
         {
           origin[i].world.x = origin[i].relative.x;
           origin[i].world.y = origin[i].relative.y;
+        }
+    }
+}
+
+static void
+system_visibility_bind (ecs_iter_t *it)
+{
+  log_debug (DEBUG_LOG_SPAM, "Entered <Bind> visibility system!");
+  visibility_c *visibility = ecs_field (it, visibility_c, 0);
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      if (visibility[i].state_binding != NULL)
+        {
+          visibility[i].b_state
+              = visibility[i].state_binding (it->entities[i], it->world);
+          continue;
         }
     }
 }
@@ -1696,6 +1724,16 @@ init_pluto_systems (ecs_world_t *ecs)
   }
   {
     ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_visibility_bind",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (visibility_c) } } };
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = system_visibility_bind });
+  }
+  {
+    ecs_entity_t ent
         = ecs_entity (ecs, { .name = "system_anim_player_advance",
                              .add = ecs_ids (ecs_dependson (EcsOnUpdate)) });
     ecs_query_desc_t query = { .terms = { { .id = ecs_id (anim_player_c) } } };
@@ -1894,6 +1932,9 @@ init_pluto_hooks (ecs_world_t *ecs)
 
   ecs_type_hooks_t text_hooks = { .ctor = text };
   ecs_set_hooks_id (ecs, ecs_id (text_c), &text_hooks);
+
+  ecs_type_hooks_t visibility_hooks = { .ctor = visibility };
+  ecs_set_hooks_id (ecs, ecs_id (visibility_c), &visibility_hooks);
 }
 
 static core_s *
@@ -1973,6 +2014,8 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, resize_c);
   ECS_COMPONENT_DEFINE (ecs, sprite_c);
   ECS_COMPONENT_DEFINE (ecs, text_c);
+  ECS_COMPONENT_DEFINE (ecs, visibility_c);
+  
   core_s *core = init_pluto_sdl (ecs, window_size);
   init_pluto_hooks (ecs);
   init_pluto_phases (ecs);

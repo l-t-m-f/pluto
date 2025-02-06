@@ -38,6 +38,7 @@ extern ECS_COMPONENT_DECLARE (render_target_c);
 extern ECS_COMPONENT_DECLARE (resize_c);
 extern ECS_COMPONENT_DECLARE (sprite_c);
 extern ECS_COMPONENT_DECLARE (text_c);
+extern ECS_COMPONENT_DECLARE (visibility_c);
 
 #define MARGIN_HANDLE_NONE 0
 #define MARGIN_HANDLE_TOP_EDGE 1
@@ -264,13 +265,19 @@ typedef struct component_sprite
 typedef struct component_text
 {
   string_t content;
-  void (*content_binding)(ecs_entity_t, ecs_world_t *, string_t);
+  void (*content_binding) (ecs_entity_t, ecs_world_t *, string_t);
   Sint32 align_h;
   Sint32 align_v;
   Uint8 font_size;
   bool b_is_shown;
   bool b_uses_color;
 } text_c;
+
+typedef struct component_visibility
+{
+  bool b_state;
+  bool (*state_binding) (ecs_entity_t, ecs_world_t *);
+} visibility_c;
 
 /******************************/
 /********* Core API ***********/
