@@ -1005,69 +1005,70 @@ static void
 system_draw (ecs_iter_t *it)
 {
   log_debug (DEBUG_LOG_SPAM, "Entered <Draw> system!");
-  bounds_c *bounds = ecs_field (it, bounds_c, 0);
-  origin_c *origin = ecs_field (it, origin_c, 1);
-  Sint8 sprite_id = 2;
+  visibility_c *visibility = ecs_field (it, visibility_c, 0);
+  bounds_c *bounds = ecs_field (it, bounds_c, 1);
+  origin_c *origin = ecs_field (it, origin_c, 2);
+  Sint8 sprite_id = 3;
   sprite_c *sprite_opt = NULL;
   if (ecs_field_is_set (it, sprite_id) == true)
     {
       sprite_opt = ecs_field (it, sprite_c, sprite_id);
     }
-  Sint8 render_target_id = 3;
+  Sint8 render_target_id = 4;
   render_target_c *render_target_opt = NULL;
   if (ecs_field_is_set (it, render_target_id) == true)
     {
       render_target_opt = ecs_field (it, render_target_c, render_target_id);
     }
-  Sint8 pattern_id = 4;
+  Sint8 pattern_id = 5;
   pattern_c *pattern_opt = NULL;
   if (ecs_field_is_set (it, pattern_id) == true)
     {
       pattern_opt = ecs_field (it, pattern_c, pattern_id);
     }
-  Sint8 ngrid_id = 5;
+  Sint8 ngrid_id = 6;
   ngrid_c *ngrid_opt = NULL;
   if (ecs_field_is_set (it, ngrid_id) == true)
     {
       ngrid_opt = ecs_field (it, ngrid_c, ngrid_id);
     }
-  Sint8 box_id = 6;
+  Sint8 box_id = 7;
   box_c *box_opt = NULL;
   if (ecs_field_is_set (it, box_id) == true)
     {
       box_opt = ecs_field (it, box_c, box_id);
     }
-  Sint8 margins_id = 7;
+  Sint8 margins_id = 8;
   margins_c *margins_opt = NULL;
   if (ecs_field_is_set (it, margins_id) == true)
     {
       margins_opt = ecs_field (it, margins_c, margins_id);
     }
-  Sint8 text_id = 8;
+  Sint8 text_id = 9;
   text_c *text_opt = NULL;
   if (ecs_field_is_set (it, text_id) == true)
     {
       text_opt = ecs_field (it, text_c, text_id);
     }
-  Sint8 alpha_id = 9;
+  Sint8 alpha_id = 10;
   alpha_c *alpha_opt = NULL;
   if (ecs_field_is_set (it, alpha_id) == true)
     {
       alpha_opt = ecs_field (it, alpha_c, alpha_id);
     }
-  Sint8 color_id = 10;
+  Sint8 color_id = 11;
   color_c *color_opt = NULL;
   if (ecs_field_is_set (it, color_id) == true)
     {
       color_opt = ecs_field (it, color_c, color_id);
     }
-  Sint8 anim_player_id = 11;
+  Sint8 anim_player_id = 12;
   anim_player_c *anim_player_opt = NULL;
   if (ecs_field_is_set (it, anim_player_id) == true)
     {
       anim_player_opt = ecs_field (it, anim_player_c, anim_player_id);
     }
-  Sint8 cache_id = 12;
+  Sint8 cache_id = 13;
   cache_c *cache_opt = NULL;
   if (ecs_field_is_set (it, cache_id) == true)
     {
@@ -1078,6 +1079,10 @@ system_draw (ecs_iter_t *it)
 
   for (Sint32 i = 0; i < it->count; i++)
     {
+      if (visibility[i].b_state == false)
+        {
+          continue;
+        }
       if (sprite_opt != NULL && &sprite_opt[i] != NULL)
         {
           if (sprite_opt[i].b_is_shown == false)
@@ -1814,7 +1819,8 @@ init_pluto_systems (ecs_world_t *ecs)
         { .name = "system_draw",
           .add = ecs_ids (ecs_dependson (ecs_lookup (ecs, "render_phase"))) });
     ecs_query_desc_t query
-        = { .terms = { { .id = ecs_id (bounds_c) },
+        = { .terms = { { .id = ecs_id (visibility_c) },
+                       { .id = ecs_id (bounds_c) },
                        { .id = ecs_id (origin_c) },
                        { .id = ecs_id (sprite_c), .oper = EcsOptional },
                        { .id = ecs_id (render_target_c), .oper = EcsOptional },
@@ -2015,7 +2021,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, sprite_c);
   ECS_COMPONENT_DEFINE (ecs, text_c);
   ECS_COMPONENT_DEFINE (ecs, visibility_c);
-  
+
   core_s *core = init_pluto_sdl (ecs, window_size);
   init_pluto_hooks (ecs);
   init_pluto_phases (ecs);
