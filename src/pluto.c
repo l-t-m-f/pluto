@@ -501,7 +501,7 @@ system_click_toggle (ecs_iter_t *it)
 {
   log_debug (DEBUG_LOG_SPAM, "Entered <Toggle> click system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
-  struct custom_input_data *custom_data = core->input_man->custom_data;
+  struct pluto_input_data *custom_data = core->input_man->custom_data;
   if (custom_data->b_is_dragging_widget == true
       || custom_data->b_is_resizing_widget == true)
     {
@@ -576,7 +576,7 @@ system_drag_apply_delta (ecs_iter_t *it)
 {
   log_debug (DEBUG_LOG_SPAM, "Entered <Apply Delta> drag system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
-  struct custom_input_data *custom_data = core->input_man->custom_data;
+  struct pluto_input_data *custom_data = core->input_man->custom_data;
   if (custom_data->b_is_resizing_widget == true)
     {
       return;
@@ -589,7 +589,7 @@ system_drag_apply_delta (ecs_iter_t *it)
   for (Sint32 i = 0; i < it->count; i++)
     {
 
-      ((struct custom_input_data *)core->input_man->custom_data)
+      ((struct pluto_input_data *)core->input_man->custom_data)
           ->b_is_dragging_widget
           = false;
       SDL_FPoint delta = core->input_man->mouse.motion;
@@ -605,7 +605,7 @@ system_drag_apply_delta (ecs_iter_t *it)
           origin[i].relative.x += delta.x;
           origin[i].relative.y += delta.y;
 
-          ((struct custom_input_data *)core->input_man->custom_data)
+          ((struct pluto_input_data *)core->input_man->custom_data)
               ->b_is_dragging_widget
               = true;
         }
@@ -818,7 +818,7 @@ system_resize_apply_delta (ecs_iter_t *it)
 {
   log_debug (DEBUG_LOG_SPAM, "Entered <Apply Delta> resize system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
-  struct custom_input_data *custom_data = core->input_man->custom_data;
+  struct pluto_input_data *custom_data = core->input_man->custom_data;
   if (custom_data->b_is_dragging_widget == true)
     {
       return;
@@ -832,7 +832,7 @@ system_resize_apply_delta (ecs_iter_t *it)
 
   for (Sint32 i = 0; i < it->count; i++)
     {
-      ((struct custom_input_data *)core->input_man->custom_data)
+      ((struct pluto_input_data *)core->input_man->custom_data)
           ->b_is_resizing_widget
           = false;
       resize[i].b_state = false;
@@ -857,7 +857,7 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.y -= delta.y;
           resize[i].b_state = true;
 
-          ((struct custom_input_data *)core->input_man->custom_data)
+          ((struct pluto_input_data *)core->input_man->custom_data)
               ->b_is_resizing_widget
               = true;
         }
@@ -868,7 +868,7 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.y -= delta.y;
           resize[i].b_state = true;
 
-          ((struct custom_input_data *)core->input_man->custom_data)
+          ((struct pluto_input_data *)core->input_man->custom_data)
               ->b_is_resizing_widget
               = true;
         }
@@ -881,7 +881,7 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.y -= delta.y;
           resize[i].b_state = true;
 
-          ((struct custom_input_data *)core->input_man->custom_data)
+          ((struct pluto_input_data *)core->input_man->custom_data)
               ->b_is_resizing_widget
               = true;
         }
@@ -892,7 +892,7 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.x -= delta.x;
           resize[i].b_state = true;
 
-          ((struct custom_input_data *)core->input_man->custom_data)
+          ((struct pluto_input_data *)core->input_man->custom_data)
               ->b_is_resizing_widget
               = true;
         }
@@ -904,7 +904,7 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.y += delta.y;
           resize[i].b_state = true;
 
-          ((struct custom_input_data *)core->input_man->custom_data)
+          ((struct pluto_input_data *)core->input_man->custom_data)
               ->b_is_resizing_widget
               = true;
         }
@@ -914,7 +914,7 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.y += delta.y;
           resize[i].b_state = true;
 
-          ((struct custom_input_data *)core->input_man->custom_data)
+          ((struct pluto_input_data *)core->input_man->custom_data)
               ->b_is_resizing_widget
               = true;
         }
@@ -925,7 +925,7 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.y += delta.y;
           resize[i].b_state = true;
 
-          ((struct custom_input_data *)core->input_man->custom_data)
+          ((struct pluto_input_data *)core->input_man->custom_data)
               ->b_is_resizing_widget
               = true;
         }
@@ -935,7 +935,7 @@ system_resize_apply_delta (ecs_iter_t *it)
           bounds[i].size.x += delta.x;
           resize[i].b_state = true;
 
-          ((struct custom_input_data *)core->input_man->custom_data)
+          ((struct pluto_input_data *)core->input_man->custom_data)
               ->b_is_resizing_widget
               = true;
         }
@@ -1944,19 +1944,33 @@ init_pluto_hooks (ecs_world_t *ecs)
 }
 
 static core_s *
-init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
+init_pluto_sdl (ecs_world_t *ecs, struct pluto_core_params *params)
 {
   core_s *core = ecs_singleton_ensure (ecs, core_s);
-  SDL_SetHint ("SDL_WINDOWS_DPI_AWARENESS", "1");
-  SDL_Init (SDL_INIT_VIDEO);
+  if (params->b_is_DPI_aware == false)
+    {
+      SDL_SetHint ("SDL_WINDOWS_DPI_AWARENESS", "0");
+    }
+  else
+    {
+      SDL_SetHint ("SDL_WINDOWS_DPI_AWARENESS", "1");
+    }
+  SDL_Init (params->init_flags);
   TTF_Init ();
-  core->win = SDL_CreateWindow ("Console", window_size.x, window_size.y,
-                                SDL_WINDOW_RESIZABLE);
+  core->win = SDL_CreateWindow (params->window_name, params->window_size.x,
+                                params->window_size.y, params->window_flags);
   core->rend = SDL_CreateRenderer (core->win, NULL);
   SDL_SetRenderVSync (core->rend, true);
-  SDL_SetHint (SDL_HINT_GPU_DRIVER, "vulkan");
-  SDL_SetHint (SDL_HINT_RENDER_GPU_DEBUG, "1");
-  SDL_SetRenderDrawBlendMode (core->rend, SDL_BLENDMODE_BLEND);
+  SDL_SetHint (SDL_HINT_GPU_DRIVER, params->gpu_driver_hint);
+  if (params->b_should_debug_GPU == false)
+    {
+      SDL_SetHint (SDL_HINT_RENDER_GPU_DEBUG, "0");
+    }
+  else
+    {
+      SDL_SetHint (SDL_HINT_RENDER_GPU_DEBUG, "1");
+    }
+  SDL_SetRenderDrawBlendMode (core->rend, params->renderer_blend_mode);
 
   Sint32 compiled_v = SDL_VERSION;
   Sint32 linked_v = SDL_GetVersion ();
@@ -1967,7 +1981,7 @@ init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
       SDL_VERSIONNUM_MICRO (compiled_v), SDL_VERSIONNUM_MAJOR (linked_v),
       SDL_VERSIONNUM_MINOR (linked_v), SDL_VERSIONNUM_MICRO (linked_v));
 
-  core->scale = 1.f;
+  core->scale = params->default_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
 
   render_target_init (core->rend, &core->rts);
@@ -1983,17 +1997,14 @@ init_pluto_sdl (ecs_world_t *ecs, const SDL_Point window_size)
           .mouse_release_callback = handle_mouse_release,
           .mouse_hold_callback = handle_mouse_hold,
           .mouse_motion_callback = handle_mouse_motion };
-  struct custom_input_data *custom_data
-      = SDL_malloc (sizeof (struct custom_input_data));
-  custom_data->b_is_resizing_widget = false;
-  custom_data->b_is_dragging_widget = false;
-  input_man_init (&core->input_man, &callbacks, custom_data);
+
+  input_man_init (&core->input_man, &callbacks, &params->input_data);
 
   return core;
 }
 
 core_s *
-init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
+init_pluto (ecs_world_t *ecs, struct pluto_core_params *params)
 {
   ECS_COMPONENT_DEFINE (ecs, core_s);
 
@@ -2022,7 +2033,7 @@ init_pluto (ecs_world_t *ecs, const SDL_Point window_size)
   ECS_COMPONENT_DEFINE (ecs, text_c);
   ECS_COMPONENT_DEFINE (ecs, visibility_c);
 
-  core_s *core = init_pluto_sdl (ecs, window_size);
+  core_s *core = init_pluto_sdl (ecs, params);
   init_pluto_hooks (ecs);
   init_pluto_phases (ecs);
   init_pluto_tasks (ecs);

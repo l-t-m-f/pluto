@@ -51,19 +51,26 @@ extern ECS_COMPONENT_DECLARE (visibility_c);
 #define MARGIN_HANDLE_TOP_RIGHT_CORNER 8
 #define MARGIN_HANDLE_TYPE_MAX 9
 
-#define SPRITE_RENDER_TYPE_DEFAULT 0
-#define SPRITE_RENDER_TYPE_ANIMATED 1
-#define SPRITE_RENDER_TYPE_NGRID 2
-#define SPRITE_RENDER_TYPE_TILED 3
-#define SPRITE_RENDER_TYPE_TARGET 4
-#define SPRITE_RENDER_TYPE_MAX 5
-
-struct custom_input_data
+struct pluto_input_data
 {
   bool b_is_dragging_widget;
   bool b_is_resizing_widget;
   bool b_is_moving_camera;
   bool b_block_movement_hold;
+};
+
+struct pluto_core_params
+{
+  const char *window_name;
+  SDL_InitFlags init_flags;
+  SDL_WindowFlags window_flags;
+  SDL_Point window_size;
+  float default_scaling;
+  const char *gpu_driver_hint;
+  bool b_should_debug_GPU;
+  bool b_is_DPI_aware;
+  SDL_BlendMode renderer_blend_mode;
+  struct pluto_input_data input_data;
 };
 
 /******************************/
@@ -286,7 +293,7 @@ typedef struct component_visibility
 /* Call this at the start of your application. It deals with SDL and other
  * required constructs and returns a pointer to an ecs singleton containing
  * the core framework functionality. */
-core_s *init_pluto (ecs_world_t *ecs, SDL_Point window_size);
+core_s *init_pluto (ecs_world_t *ecs, struct pluto_core_params *params);
 
 /* Implement these callbacks in your application. Only mouse and keyboard are
  * supported for now.*/
