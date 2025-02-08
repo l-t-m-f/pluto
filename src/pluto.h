@@ -71,8 +71,10 @@ struct pluto_core_params
   SDL_Point window_size;
   float default_user_scaling;
   const char *gpu_driver_hint;
+  SDL_RendererLogicalPresentation logical_presentation_mode;
   bool b_should_debug_GPU;
   bool b_is_DPI_aware;
+  bool b_has_logical_size;
   SDL_BlendMode renderer_blend_mode;
   struct pluto_input_data input_data;
 };

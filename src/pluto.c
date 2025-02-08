@@ -1960,6 +1960,12 @@ init_pluto_sdl (ecs_world_t *ecs, struct pluto_core_params *params)
   core->win = SDL_CreateWindow (params->window_name, params->window_size.x,
                                 params->window_size.y, params->window_flags);
   core->rend = SDL_CreateRenderer (core->win, NULL);
+  if (params->b_has_logical_size == true)
+    {
+      SDL_SetRenderLogicalPresentation (core->rend, params->window_size.x,
+                                        params->window_size.y,
+                                        params->logical_presentation_mode);
+    }
   SDL_SetRenderVSync (core->rend, true);
   SDL_SetHint (SDL_HINT_GPU_DRIVER, params->gpu_driver_hint);
   if (params->b_should_debug_GPU == false)
