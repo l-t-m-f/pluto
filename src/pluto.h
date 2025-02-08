@@ -51,6 +51,10 @@ extern ECS_COMPONENT_DECLARE (visibility_c);
 #define MARGIN_HANDLE_TOP_RIGHT_CORNER 8
 #define MARGIN_HANDLE_TYPE_MAX 9
 
+ARRAY_DEF (arr_entity, ecs_entity_t, M_BASIC_OPLIST)
+ARRAY_DEF (mat2d_entity, arr_entity_t, M_ARRAY_OPLIST (arr_entity))
+ARRAY_DEF (mat3d_entity, mat2d_entity_t, M_ARRAY_OPLIST (mat2d_entity))
+
 struct pluto_input_data
 {
   bool b_is_dragging_widget;
@@ -65,7 +69,7 @@ struct pluto_core_params
   SDL_InitFlags init_flags;
   SDL_WindowFlags window_flags;
   SDL_Point window_size;
-  float default_scaling;
+  float default_user_scaling;
   const char *gpu_driver_hint;
   bool b_should_debug_GPU;
   bool b_is_DPI_aware;

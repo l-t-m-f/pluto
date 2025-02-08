@@ -1981,7 +1981,7 @@ init_pluto_sdl (ecs_world_t *ecs, struct pluto_core_params *params)
       SDL_VERSIONNUM_MICRO (compiled_v), SDL_VERSIONNUM_MAJOR (linked_v),
       SDL_VERSIONNUM_MINOR (linked_v), SDL_VERSIONNUM_MICRO (linked_v));
 
-  core->scale = params->default_scaling;
+  core->scale = params->default_user_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
 
   render_target_init (core->rend, &core->rts);
