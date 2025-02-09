@@ -45,6 +45,7 @@ array (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   array_c *array = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
+      arr_entity_init(array->content);
     }
 }
 
@@ -191,6 +192,7 @@ mat2d (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   mat2d_c *mat2d = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
+      mat2d_entity_init (mat2d->content);
     }
 }
 
@@ -200,6 +202,7 @@ mat3d (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   mat3d_c *mat3d = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
+      mat3d_entity_init (mat3d->content);
     }
 }
 
