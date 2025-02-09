@@ -1947,11 +1947,7 @@ static core_s *
 init_pluto_sdl (ecs_world_t *ecs, struct pluto_core_params *params)
 {
   core_s *core = ecs_singleton_ensure (ecs, core_s);
-  if (params->b_is_DPI_aware == false)
-    {
-      SDL_SetHint ("SDL_WINDOWS_DPI_AWARENESS", "0");
-    }
-  else
+  if (params->b_is_DPI_aware == true)
     {
       SDL_SetHint ("SDL_WINDOWS_DPI_AWARENESS", "1");
     }
