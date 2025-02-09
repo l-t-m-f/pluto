@@ -1081,13 +1081,22 @@ system_draw (ecs_iter_t *it)
     {
       if (visibility[i].b_state == false)
         {
-          continue;
+          goto end;
         }
+
+      /* Enable a render target if needs be. */
+
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
+        {
+          render_target_switch (core->rts, cache_opt[i].cache_name);
+          cache_opt[i].b_should_regenerate = false;
+        }
+
       if (sprite_opt != NULL && &sprite_opt[i] != NULL)
         {
           if (sprite_opt[i].b_is_shown == false)
             {
-              continue;
+              goto end;
             }
           SDL_FRect dest = { .x = origin[i].world.x, .y = origin[i].world.y };
 
@@ -1145,18 +1154,6 @@ system_draw (ecs_iter_t *it)
                 }
             }
 
-          /* Enable a render target if needs be. */
-
-          if (cache_opt != NULL && &cache_opt[i] != NULL)
-            {
-              if (cache_opt[i].b_should_regenerate == false)
-                {
-                  continue;
-                }
-              render_target_switch (core->rts, cache_opt[i].cache_name);
-              cache_opt[i].b_should_regenerate = false;
-            }
-
           struct satlas_render_color_params params = { .opacity = sprite_alpha,
                                                        .tint_r = sprite_r,
                                                        .tint_g = sprite_g,
@@ -1173,17 +1170,12 @@ system_draw (ecs_iter_t *it)
               satlas_render_entry (core->atlas, sprite_opt[i].name, &dest,
                                    &params);
             }
-
-          if (cache_opt != NULL && &cache_opt[i] != NULL)
-            {
-              render_target_switch (core->rts, STRING_CTE (""));
-            }
         }
       if (render_target_opt != NULL && &render_target_opt[i] != NULL)
         {
           if (render_target_opt[i].b_is_shown == false)
             {
-              continue;
+              goto end;
             }
           SDL_FRect dest = { .x = origin[i].world.x, .y = origin[i].world.y };
 
@@ -1224,18 +1216,6 @@ system_draw (ecs_iter_t *it)
                 }
             }
 
-          /* Enable a render target if needs be. */
-
-          if (cache_opt != NULL && &cache_opt[i] != NULL)
-            {
-              if (cache_opt[i].b_should_regenerate == false)
-                {
-                  continue;
-                }
-              render_target_switch (core->rts, cache_opt[i].cache_name);
-              cache_opt[i].b_should_regenerate = false;
-            }
-
           struct satlas_render_color_params params = {
             .opacity = rt_a, .tint_r = rt_r, .tint_g = rt_g, .tint_b = rt_b
           };
@@ -1243,17 +1223,12 @@ system_draw (ecs_iter_t *it)
           const struct render_target *rt = *dict_render_target_get (
               core->rts->dict, render_target_opt[i].name);
           SDL_RenderTexture (core->rend, rt->texture, NULL, &dest);
-
-          if (cache_opt != NULL && &cache_opt[i] != NULL)
-            {
-              render_target_switch (core->rts, STRING_CTE (""));
-            }
         }
       if (pattern_opt != NULL && &pattern_opt[i] != NULL)
         {
           if (pattern_opt[i].b_is_shown == false)
             {
-              continue;
+              goto end;
             }
           SDL_FRect dest = { .x = origin[i].world.x, .y = origin[i].world.y };
 
@@ -1294,18 +1269,6 @@ system_draw (ecs_iter_t *it)
                 }
             }
 
-          /* Enable a render target if needs be. */
-
-          if (cache_opt != NULL && &cache_opt[i] != NULL)
-            {
-              if (cache_opt[i].b_should_regenerate == false)
-                {
-                  continue;
-                }
-              render_target_switch (core->rts, cache_opt[i].cache_name);
-              cache_opt[i].b_should_regenerate = false;
-            }
-
           struct satlas_render_color_params params = { .opacity = pattern_a,
                                                        .tint_r = pattern_r,
                                                        .tint_g = pattern_g,
@@ -1313,17 +1276,12 @@ system_draw (ecs_iter_t *it)
 
           satlas_render_entry_tiled (core->atlas, pattern_opt[i].name, &dest,
                                      core->scale, &params);
-
-          if (cache_opt != NULL && &cache_opt[i] != NULL)
-            {
-              render_target_switch (core->rts, STRING_CTE (""));
-            }
         }
       if (box_opt != NULL && &box_opt[i] != NULL)
         {
           if (box_opt[i].b_is_shown == false)
             {
-              continue;
+              goto end;
             }
           SDL_FRect dest = (SDL_FRect){ origin[i].world.x, origin[i].world.y,
                                         bounds[i].size.x, bounds[i].size.y };
@@ -1364,7 +1322,7 @@ system_draw (ecs_iter_t *it)
           if (box_opt[i].b_is_filled == true)
             {
               SDL_RenderFillRect (core->rend, &dest);
-              continue;
+              goto end;
             }
           SDL_RenderRect (core->rend, &dest);
         }
@@ -1374,7 +1332,7 @@ system_draw (ecs_iter_t *it)
             {
               if (ngrid_opt[i].b_is_shown == false)
                 {
-                  continue;
+                  goto end;
                 }
               SDL_FRect dest
                   = { .x = origin[i].world.x, .y = origin[i].world.y };
@@ -1415,18 +1373,6 @@ system_draw (ecs_iter_t *it)
                       ngrid_b = color_opt[i].b;
                     }
                 }
-
-              /* Enable a render target if needs be. */
-              if (cache_opt != NULL && &cache_opt[i] != NULL)
-                {
-                  if (cache_opt[i].b_should_regenerate == false)
-                    {
-                      continue;
-                    }
-                  render_target_switch (core->rts, cache_opt[i].cache_name);
-                  cache_opt[i].b_should_regenerate = false;
-                }
-
               struct satlas_render_color_params params = { .opacity = ngrid_a,
                                                            .tint_r = ngrid_r,
                                                            .tint_g = ngrid_g,
@@ -1444,14 +1390,10 @@ system_draw (ecs_iter_t *it)
                       core->atlas, ngrid_opt[i].name, &margins_opt[i].value,
                       1.f, &dest, &params, ngrid_opt[i].b_tiled_edges);
                 }
-              if (cache_opt != NULL && &cache_opt[i] != NULL)
-                {
-                  render_target_switch (core->rts, STRING_CTE (""));
-                }
             }
           if (margins_opt[i].b_is_shown == false)
             {
-              continue;
+              goto end;
             }
           SDL_FPoint pos = origin[i].world;
           SDL_FPoint size = bounds[i].size;
@@ -1462,7 +1404,7 @@ system_draw (ecs_iter_t *it)
           if (margins_values.top == 0.f && margins_values.left == 0.f
               && margins_values.bottom == 0.f && margins_values.right == 0.f)
             {
-              continue;
+              goto end;
             }
           if (origin[i].b_can_be_scaled == true)
             {
@@ -1584,7 +1526,7 @@ system_draw (ecs_iter_t *it)
         {
           if (text_opt[i].b_is_shown == false)
             {
-              continue;
+              goto end;
             }
           Uint8 text_r = 255u;
           Uint8 text_g = 255u;
@@ -1620,6 +1562,11 @@ system_draw (ecs_iter_t *it)
                                         .align_v = text_opt[i].align_v };
           text_man_render_string (core->text_man, &params,
                                   text_opt[i].content);
+        }
+    end:
+      if (cache_opt != NULL && &cache_opt[i] != NULL)
+        {
+          render_target_switch (core->rts, STRING_CTE (""));
         }
     }
 }
