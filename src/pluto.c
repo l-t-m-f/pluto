@@ -342,6 +342,7 @@ text (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   text_c *text = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
+      text[i].content_binding = NULL;
       text[i].align_h = TEXT_ALIGN_H_LEFT;
       text[i].align_v = TEXT_ALIGN_V_TOP;
       text[i].font_size = 5u;
