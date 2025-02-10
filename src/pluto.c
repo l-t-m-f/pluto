@@ -73,6 +73,16 @@ anim_player (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 }
 
 static void
+d_anim_player (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
+{
+  anim_player_c *anim_player = ptr;
+  for (Sint32 i = 0; i < count; i++)
+    {
+      string_clear(anim_player[i].control_pose);
+    }
+}
+
+static void
 bounds (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 {
   bounds_c *bounds = ptr;
@@ -104,6 +114,7 @@ cache (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   cache_c *cache = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
+      string_init(cache[i].cache_name);
       cache[i].b_should_regenerate = true;
     }
 }
@@ -247,6 +258,7 @@ ngrid (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   ngrid_c *ngrid = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
+      string_init(ngrid[i].name);
       ngrid[i].b_is_shown = true;
       ngrid[i].b_uses_color = false;
       ngrid[i].b_tiled_edges = false;
@@ -276,6 +288,7 @@ pattern (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   pattern_c *pattern = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
+      string_init(pattern[i].name);
       pattern[i].b_is_shown = true;
       pattern[i].b_uses_color = false;
     }
@@ -287,6 +300,7 @@ render_target (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   render_target_c *render_target = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
+      string_init(render_target[i].name);
       render_target[i].b_is_shown = true;
       render_target[i].b_uses_color = false;
     }
@@ -313,6 +327,7 @@ sprite (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   sprite_c *sprite = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
+      string_init(sprite[i].name);
       sprite[i].b_is_shown = true;
       sprite[i].b_uses_color = false;
       sprite[i].offset = (SDL_FPoint){ 0.f, 0.f };
@@ -446,7 +461,7 @@ system_anim_player_assign_sprite_name (ecs_iter_t *it)
 
       struct anim_flipbook *flipbook = *dict_sint32_anim_flipbook_get (
           pose->directions, anim_player[i].control_direction);
-      string_init_set (sprite[i].name, flipbook->name);
+      string_set (sprite[i].name, flipbook->name);
     }
 }
 
@@ -1826,7 +1841,8 @@ init_pluto_hooks (ecs_world_t *ecs)
   ecs_type_hooks_t alpha_hooks = { .ctor = alpha };
   ecs_set_hooks_id (ecs, ecs_id (alpha_c), &alpha_hooks);
 
-  ecs_type_hooks_t anim_player_hooks = { .ctor = anim_player };
+  ecs_type_hooks_t anim_player_hooks
+      = { .ctor = anim_player, .dtor = d_anim_player };
   ecs_set_hooks_id (ecs, ecs_id (anim_player_c), &anim_player_hooks);
 
   ecs_type_hooks_t bounds_hooks = { .ctor = bounds };
