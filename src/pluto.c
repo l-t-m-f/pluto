@@ -1107,6 +1107,10 @@ system_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
+          if(cache_opt[i].b_should_regenerate == false)
+            {
+              goto end;
+            }
           render_target_switch (core->rts, cache_opt[i].cache_name);
           cache_opt[i].b_should_regenerate = false;
         }
