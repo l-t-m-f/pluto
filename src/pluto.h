@@ -102,6 +102,8 @@ typedef struct singleton_core
   struct rts_manager *rts;
   float scale;
   SDL_FPoint scroll_value;
+  bool b_ignore_scroll_x;
+  bool b_ignore_scroll_y;
 } core_s;
 
 typedef struct component_alpha
