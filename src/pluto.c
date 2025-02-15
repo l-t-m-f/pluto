@@ -7,6 +7,7 @@
 #include "profiling.h"
 #include "sprite_atlas.h"
 #include "text_man.h"
+#include "util.h"
 
 ECS_COMPONENT_DECLARE (core_s);
 
@@ -31,6 +32,7 @@ ECS_COMPONENT_DECLARE (origin_c);
 ECS_COMPONENT_DECLARE (pattern_c);
 ECS_COMPONENT_DECLARE (render_target_c);
 ECS_COMPONENT_DECLARE (resize_c);
+ECS_COMPONENT_DECLARE (scroll_to_c);
 ECS_COMPONENT_DECLARE (sprite_c);
 ECS_COMPONENT_DECLARE (text_c);
 ECS_COMPONENT_DECLARE (visibility_c);
@@ -961,6 +963,36 @@ system_resize_apply_delta (ecs_iter_t *it)
 }
 
 static void
+system_scroll_to_update (ecs_iter_t *it)
+{
+  log_debug (DEBUG_LOG_SPAM, "Entered <Update> scroll to system!");
+
+  scroll_to_c *scroll_to = ecs_field (it, scroll_to_c, 0);
+  origin_c *origin = ecs_field (it, origin_c, 1);
+
+  core_s *core = ecs_get_mut (it->world, ecs_id (core_s), core_s);
+
+  SDL_FPoint total = { .x = 0.f, .y = 0.f };
+  for (Sint32 i = 0; i < it->count; i++)
+    {
+      total.x += origin[i].world.x;
+      total.y += origin[i].world.y;
+    }
+  total.x /= (float)it->count;
+  total.y /= (float)it->count;
+
+  SDL_FPoint offset
+      = { (float)core->logical_size.x / 2.0f, (float)core->logical_size.y / 2.0f };
+
+  core->scroll_value.x
+      = lerp_f (core->scroll_value.x, total.x - offset.x, 0.03f);
+  core->scroll_value.y
+      = lerp_f (core->scroll_value.y, total.y - offset.y, 0.03f);
+
+  log_debug (0, "DEBUG >> scroll_value = (%.1f, %.1f)", total.x, total.y);
+}
+
+static void
 system_text_bind (ecs_iter_t *it)
 {
   log_debug (DEBUG_LOG_SPAM, "Entered <Bind> text system!");
@@ -1760,6 +1792,17 @@ init_pluto_systems (ecs_world_t *ecs)
   }
   {
     ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_scroll_to_update",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (scroll_to_c) },
+                                          { .id = ecs_id (origin_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_scroll_to_update });
+  }
+  {
+    ecs_entity_t ent
         = ecs_entity (ecs, { .name = "system_anim_player_advance",
                              .add = ecs_ids (ecs_dependson (EcsOnUpdate)) });
     ecs_query_desc_t query = { .terms = { { .id = ecs_id (anim_player_c) } } };
@@ -1966,7 +2009,7 @@ init_pluto_hooks (ecs_world_t *ecs)
 }
 
 static core_s *
-init_pluto_sdl (ecs_world_t *ecs, struct pluto_core_params *params)
+init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
 {
   core_s *core = ecs_singleton_ensure (ecs, core_s);
   if (params->b_is_DPI_aware == true)
@@ -1975,13 +2018,14 @@ init_pluto_sdl (ecs_world_t *ecs, struct pluto_core_params *params)
     }
   SDL_Init (params->init_flags);
   TTF_Init ();
-  core->win = SDL_CreateWindow (params->window_name, params->window_size.x,
-                                params->window_size.y, params->window_flags);
+  core->win
+      = SDL_CreateWindow (params->window_name, params->default_win_size.x,
+                          params->default_win_size.y, params->window_flags);
   core->rend = SDL_CreateRenderer (core->win, NULL);
   if (params->b_has_logical_size == true)
     {
-      SDL_SetRenderLogicalPresentation (core->rend, params->window_size.x,
-                                        params->window_size.y,
+      SDL_SetRenderLogicalPresentation (core->rend, params->default_win_size.x,
+                                        params->default_win_size.y,
                                         params->logical_presentation_mode);
     }
   SDL_SetRenderVSync (core->rend, true);
@@ -2007,12 +2051,9 @@ init_pluto_sdl (ecs_world_t *ecs, struct pluto_core_params *params)
 
   core->scale = params->default_user_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
+  core->logical_size = params->default_win_size;
 
-  render_target_init (core->rend, &core->rts);
-  satlas_init (core->rend, &core->atlas);
-
-  text_man_create_font_book (&core->text_man, core->rend);
-
+  /* Init the input manager. */
   struct input_man_callbacks callbacks
       = { .key_press_callback = handle_key_press,
           .key_release_callback = handle_key_release,
@@ -2021,8 +2062,16 @@ init_pluto_sdl (ecs_world_t *ecs, struct pluto_core_params *params)
           .mouse_release_callback = handle_mouse_release,
           .mouse_hold_callback = handle_mouse_hold,
           .mouse_motion_callback = handle_mouse_motion };
-
   input_man_init (&core->input_man, &callbacks, &params->input_data);
+
+  /* Init the render targets manager. */
+  render_target_init (core->rend, &core->rts);
+
+  /* Init the sprite atlas. */
+  satlas_init (core->rend, &core->atlas);
+
+  /* Init the text manager. */
+  text_man_create_font_book (&core->text_man, core->rend);
 
   return core;
 }
@@ -2053,11 +2102,12 @@ init_pluto (ecs_world_t *ecs, struct pluto_core_params *params)
   ECS_COMPONENT_DEFINE (ecs, pattern_c);
   ECS_COMPONENT_DEFINE (ecs, render_target_c);
   ECS_COMPONENT_DEFINE (ecs, resize_c);
+  ECS_COMPONENT_DEFINE (ecs, scroll_to_c);
   ECS_COMPONENT_DEFINE (ecs, sprite_c);
   ECS_COMPONENT_DEFINE (ecs, text_c);
   ECS_COMPONENT_DEFINE (ecs, visibility_c);
 
-  core_s *core = init_pluto_sdl (ecs, params);
+  core_s *core = init_pluto_core (ecs, params);
   init_pluto_hooks (ecs);
   init_pluto_phases (ecs);
   init_pluto_tasks (ecs);

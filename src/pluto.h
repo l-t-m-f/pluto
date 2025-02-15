@@ -36,6 +36,7 @@ extern ECS_COMPONENT_DECLARE (origin_c);
 extern ECS_COMPONENT_DECLARE (pattern_c);
 extern ECS_COMPONENT_DECLARE (render_target_c);
 extern ECS_COMPONENT_DECLARE (resize_c);
+extern ECS_COMPONENT_DECLARE (scroll_to_c);
 extern ECS_COMPONENT_DECLARE (sprite_c);
 extern ECS_COMPONENT_DECLARE (text_c);
 extern ECS_COMPONENT_DECLARE (visibility_c);
@@ -69,15 +70,15 @@ struct pluto_input_data
 struct pluto_core_params
 {
   const char *window_name;
+  SDL_Point default_win_size;
   SDL_InitFlags init_flags;
   SDL_WindowFlags window_flags;
-  SDL_Point window_size;
   float default_user_scaling;
   const char *gpu_driver_hint;
-  SDL_RendererLogicalPresentation logical_presentation_mode;
   bool b_should_debug_GPU;
   bool b_is_DPI_aware;
   bool b_has_logical_size;
+  SDL_RendererLogicalPresentation logical_presentation_mode;
   SDL_BlendMode renderer_blend_mode;
   struct pluto_input_data input_data;
 };
@@ -90,6 +91,7 @@ typedef struct singleton_core
 {
   SDL_Window *win;
   SDL_Point window_size;
+  SDL_Point logical_size;
   bool b_is_fullscreen_presentation;
   SDL_Renderer *rend;
   struct screen *screen;
@@ -269,6 +271,11 @@ typedef struct component_resize
   Uint8 toggled_b;
   Uint8 toggled_a;
 } resize_c;
+
+typedef struct component_scroll_to
+{
+  float strength;
+} scroll_to_c;
 
 typedef struct component_sprite
 {
