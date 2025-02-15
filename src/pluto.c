@@ -1106,12 +1106,12 @@ system_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          if(cache_opt[i].b_should_regenerate == false)
+          if (cache_opt[i].b_should_regenerate == false)
             {
               goto end;
             }
           render_target_switch (core->rts, cache_opt[i].cache_name);
-          if(cache_opt[i].b_should_always_regen == false)
+          if (cache_opt[i].b_should_always_regen == false)
             {
               cache_opt[i].b_should_regenerate = false;
             }
@@ -1161,6 +1161,13 @@ system_draw (ecs_iter_t *it)
               dest.x -= dest.w / 2;
               dest.y -= dest.h / 2;
             }
+
+          if (origin[i].b_is_screen_based == false)
+            {
+              dest.x -= core->scroll_value.x;
+              dest.y -= core->scroll_value.y;
+            }
+
           Uint8 sprite_r = 255u;
           Uint8 sprite_g = 255u;
           Uint8 sprite_b = 255u;
@@ -1223,6 +1230,13 @@ system_draw (ecs_iter_t *it)
               dest.x -= dest.w / 2;
               dest.y -= dest.h / 2;
             }
+
+          if (origin[i].b_is_screen_based == false)
+            {
+              dest.x -= core->scroll_value.x;
+              dest.y -= core->scroll_value.y;
+            }
+
           Uint8 rt_r = 255u;
           Uint8 rt_g = 255u;
           Uint8 rt_b = 255u;
@@ -1276,6 +1290,13 @@ system_draw (ecs_iter_t *it)
               dest.x -= dest.w / 2;
               dest.y -= dest.h / 2;
             }
+
+          if (origin[i].b_is_screen_based == false)
+            {
+              dest.x -= core->scroll_value.x;
+              dest.y -= core->scroll_value.y;
+            }
+
           Uint8 pattern_r = 255u;
           Uint8 pattern_g = 255u;
           Uint8 pattern_b = 255u;
@@ -1343,6 +1364,13 @@ system_draw (ecs_iter_t *it)
               dest.x -= dest.w / 2;
               dest.y -= dest.h / 2;
             }
+
+          if (origin[i].b_is_screen_based == false)
+            {
+              dest.x -= core->scroll_value.x;
+              dest.y -= core->scroll_value.y;
+            }
+
           SDL_SetRenderDrawColor (core->rend, box_r, box_g, box_b, box_alpha);
           if (box_opt[i].b_is_filled == true)
             {
@@ -1381,6 +1409,13 @@ system_draw (ecs_iter_t *it)
                   dest.x -= dest.w / 2;
                   dest.y -= dest.h / 2;
                 }
+
+              if (origin[i].b_is_screen_based == false)
+                {
+                  dest.x -= core->scroll_value.x;
+                  dest.y -= core->scroll_value.y;
+                }
+
               Uint8 ngrid_r = 255u;
               Uint8 ngrid_g = 255u;
               Uint8 ngrid_b = 255u;
@@ -1436,6 +1471,13 @@ system_draw (ecs_iter_t *it)
               pos.x *= core->scale;
               pos.y *= core->scale;
             }
+
+          if (origin[i].b_is_screen_based == false)
+            {
+              pos.x -= core->scroll_value.x;
+              pos.y -= core->scroll_value.y;
+            }
+
           if (bounds[i].b_can_be_scaled == true)
             {
               size.x *= core->scale;
@@ -1576,6 +1618,13 @@ system_draw (ecs_iter_t *it)
               dest.x *= core->scale;
               dest.y *= core->scale;
             }
+
+          if (origin[i].b_is_screen_based == false)
+            {
+              dest.x -= core->scroll_value.x;
+              dest.y -= core->scroll_value.y;
+            }
+
           struct text_params params = { .size = text_opt[i].font_size,
                                         .tint_r = text_r,
                                         .tint_g = text_g,

@@ -99,6 +99,7 @@ typedef struct singleton_core
   struct input_man *input_man;
   struct rts_manager *rts;
   float scale;
+  SDL_FPoint scroll_value;
 } core_s;
 
 typedef struct component_alpha
