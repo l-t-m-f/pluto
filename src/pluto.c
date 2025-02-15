@@ -1657,8 +1657,6 @@ system_scroll_to_update (ecs_iter_t *it)
       = lerp_f (core->scroll_value.x, total.x - offset.x, 0.03f);
   core->scroll_value.y
       = lerp_f (core->scroll_value.y, total.y - offset.y, 0.03f);
-
-  log_debug (0, "DEBUG >> scroll_value = (%.1f, %.1f)", total.x, total.y);
 }
 
 static void
