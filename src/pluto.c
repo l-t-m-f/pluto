@@ -45,7 +45,7 @@ array (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   array_c *array = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      arr_entity_init(array->content);
+      arr_entity_init (array->content);
     }
 }
 
@@ -78,7 +78,7 @@ d_anim_player (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   anim_player_c *anim_player = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      string_clear(anim_player[i].control_pose);
+      string_clear (anim_player[i].control_pose);
     }
 }
 
@@ -114,8 +114,9 @@ cache (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   cache_c *cache = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      string_init(cache[i].cache_name);
+      string_init (cache[i].cache_name);
       cache[i].b_should_regenerate = true;
+      cache[i].b_should_always_regen = false;
     }
 }
 
@@ -258,7 +259,7 @@ ngrid (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   ngrid_c *ngrid = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      string_init(ngrid[i].name);
+      string_init (ngrid[i].name);
       ngrid[i].b_is_shown = true;
       ngrid[i].b_uses_color = false;
       ngrid[i].b_tiled_edges = false;
@@ -288,7 +289,7 @@ pattern (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   pattern_c *pattern = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      string_init(pattern[i].name);
+      string_init (pattern[i].name);
       pattern[i].b_is_shown = true;
       pattern[i].b_uses_color = false;
     }
@@ -300,7 +301,7 @@ render_target (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   render_target_c *render_target = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      string_init(render_target[i].name);
+      string_init (render_target[i].name);
       render_target[i].b_is_shown = true;
       render_target[i].b_uses_color = false;
     }
@@ -327,7 +328,7 @@ sprite (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
   sprite_c *sprite = ptr;
   for (Sint32 i = 0; i < count; i++)
     {
-      string_init(sprite[i].name);
+      string_init (sprite[i].name);
       sprite[i].b_is_shown = true;
       sprite[i].b_uses_color = false;
       sprite[i].offset = (SDL_FPoint){ 0.f, 0.f };
@@ -793,8 +794,6 @@ system_movement_apply_delta (ecs_iter_t *it)
       if (movement[i].cooldown > 0)
         {
           movement[i].cooldown--;
-          movement[i].delta.x = 0;
-          movement[i].delta.y = 0;
           continue;
         }
       index[i].x += movement[i].delta.x;
@@ -1107,8 +1106,15 @@ system_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
+          if (cache_opt[i].b_should_regenerate == false)
+            {
+              goto end;
+            }
           render_target_switch (core->rts, cache_opt[i].cache_name);
-          cache_opt[i].b_should_regenerate = false;
+          if(cache_opt[i].b_should_always_regen == false)
+            {
+              cache_opt[i].b_should_regenerate = false;
+            }
         }
 
       if (sprite_opt != NULL && &sprite_opt[i] != NULL)

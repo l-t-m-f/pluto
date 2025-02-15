@@ -140,6 +140,7 @@ typedef struct component_box
 typedef struct component_cache
 {
   bool b_should_regenerate;
+  bool b_should_always_regen;
   string_t cache_name;
 } cache_c;
 
