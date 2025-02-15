@@ -1106,7 +1106,7 @@ system_draw (ecs_iter_t *it)
 
       if (cache_opt != NULL && &cache_opt[i] != NULL)
         {
-          if (cache_opt[i].b_should_regenerate == false)
+          if(cache_opt[i].b_should_regenerate == false)
             {
               goto end;
             }
