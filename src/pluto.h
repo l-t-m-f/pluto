@@ -52,12 +52,11 @@ extern ECS_COMPONENT_DECLARE (visibility_c);
 #define MARGIN_HANDLE_TOP_RIGHT_CORNER 8
 #define MARGIN_HANDLE_TYPE_MAX 9
 
-ARRAY_DEF (arr_entity, ecs_entity_t, M_BASIC_OPLIST)
-ARRAY_DEF (mat2d_entity, arr_entity_t, M_ARRAY_OPLIST (arr_entity))
-ARRAY_DEF (mat3d_entity, mat2d_entity_t, M_ARRAY_OPLIST (mat2d_entity))
+#define PLUTO_SCROLL_STYLE_PROPORTIONAL 0
+#define PLUTO_SCROLL_STYLE_CONSTANT 1
+#define PLUTO_SCROLL_STYLE_BLEND 2
 
-DICT_DEF2 (dict_string_to_query_ptr, string_t, M_STRING_OPLIST, ecs_query_t *,
-           M_PTR_OPLIST)
+#include "pluto_containers.h"
 
 struct pluto_input_data
 {
@@ -81,6 +80,13 @@ struct pluto_core_params
   SDL_RendererLogicalPresentation logical_presentation_mode;
   SDL_BlendMode renderer_blend_mode;
   struct pluto_input_data input_data;
+  Sint32 initial_scroll_style;
+  float initial_proportional_scroll_speed;
+  float initial_constant_scroll_speed;
+  bool b_should_initially_ignore_scroll_x;
+  bool b_should_initially_ignore_scroll_y;
+  bool b_should_initially_clamp_scroll_x;
+  bool b_should_initially_clamp_scroll_y;
 };
 
 /******************************/
@@ -104,6 +110,11 @@ typedef struct singleton_core
   SDL_FPoint scroll_value;
   bool b_ignore_scroll_x;
   bool b_ignore_scroll_y;
+  Sint32 scroll_style;
+  float proportional_scroll_speed;
+  float constant_scroll_speed;
+  bool b_clamp_scroll_x;
+  bool b_clamp_scroll_y;
 } core_s;
 
 typedef struct component_alpha

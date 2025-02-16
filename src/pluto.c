@@ -780,11 +780,11 @@ system_draw (ecs_iter_t *it)
 
           if (origin[i].b_is_screen_based == false)
             {
-              if(core->b_ignore_scroll_x == false)
+              if (core->b_ignore_scroll_x == false)
                 {
                   dest.x -= core->scroll_value.x;
                 }
-              if(core->b_ignore_scroll_y == false)
+              if (core->b_ignore_scroll_y == false)
                 {
                   dest.y -= core->scroll_value.y;
                 }
@@ -855,11 +855,11 @@ system_draw (ecs_iter_t *it)
 
           if (origin[i].b_is_screen_based == false)
             {
-              if(core->b_ignore_scroll_x == false)
+              if (core->b_ignore_scroll_x == false)
                 {
                   dest.x -= core->scroll_value.x;
                 }
-              if(core->b_ignore_scroll_y == false)
+              if (core->b_ignore_scroll_y == false)
                 {
                   dest.y -= core->scroll_value.y;
                 }
@@ -921,11 +921,11 @@ system_draw (ecs_iter_t *it)
 
           if (origin[i].b_is_screen_based == false)
             {
-              if(core->b_ignore_scroll_x == false)
+              if (core->b_ignore_scroll_x == false)
                 {
                   dest.x -= core->scroll_value.x;
                 }
-              if(core->b_ignore_scroll_y == false)
+              if (core->b_ignore_scroll_y == false)
                 {
                   dest.y -= core->scroll_value.y;
                 }
@@ -1001,11 +1001,11 @@ system_draw (ecs_iter_t *it)
 
           if (origin[i].b_is_screen_based == false)
             {
-              if(core->b_ignore_scroll_x == false)
+              if (core->b_ignore_scroll_x == false)
                 {
                   dest.x -= core->scroll_value.x;
                 }
-              if(core->b_ignore_scroll_y == false)
+              if (core->b_ignore_scroll_y == false)
                 {
                   dest.y -= core->scroll_value.y;
                 }
@@ -1052,11 +1052,11 @@ system_draw (ecs_iter_t *it)
 
               if (origin[i].b_is_screen_based == false)
                 {
-                  if(core->b_ignore_scroll_x == false)
+                  if (core->b_ignore_scroll_x == false)
                     {
                       dest.x -= core->scroll_value.x;
                     }
-                  if(core->b_ignore_scroll_y == false)
+                  if (core->b_ignore_scroll_y == false)
                     {
                       dest.y -= core->scroll_value.y;
                     }
@@ -1120,11 +1120,11 @@ system_draw (ecs_iter_t *it)
 
           if (origin[i].b_is_screen_based == false)
             {
-              if(core->b_ignore_scroll_x == false)
+              if (core->b_ignore_scroll_x == false)
                 {
                   pos.x -= core->scroll_value.x;
                 }
-              if(core->b_ignore_scroll_y == false)
+              if (core->b_ignore_scroll_y == false)
                 {
                   pos.y -= core->scroll_value.y;
                 }
@@ -1273,11 +1273,11 @@ system_draw (ecs_iter_t *it)
 
           if (origin[i].b_is_screen_based == false)
             {
-              if(core->b_ignore_scroll_x == false)
+              if (core->b_ignore_scroll_x == false)
                 {
                   dest.x -= core->scroll_value.x;
                 }
-              if(core->b_ignore_scroll_y == false)
+              if (core->b_ignore_scroll_y == false)
                 {
                   dest.y -= core->scroll_value.y;
                 }
@@ -1653,10 +1653,47 @@ system_scroll_to_update (ecs_iter_t *it)
   SDL_FPoint offset = { (float)core->logical_size.x / 2.0f,
                         (float)core->logical_size.y / 2.0f };
 
-  core->scroll_value.x
-      = lerp_f (core->scroll_value.x, total.x - offset.x, 0.03f);
-  core->scroll_value.y
-      = lerp_f (core->scroll_value.y, total.y - offset.y, 0.03f);
+  total.x -= offset.x;
+  total.y -= offset.y;
+
+  if (core->b_clamp_scroll_x == true)
+    {
+      total.x = SDL_clamp (total.x, 0, core->logical_size.x);
+    }
+  if (core->b_clamp_scroll_y == true)
+    {
+      total.y = SDL_clamp (total.y, 0, core->logical_size.y);
+    }
+
+  switch (core->scroll_style)
+    {
+    case PLUTO_SCROLL_STYLE_PROPORTIONAL:
+      {
+        core->scroll_value.x = lerp_f (core->scroll_value.x, total.x,
+                                       core->proportional_scroll_speed);
+        core->scroll_value.y = lerp_f (core->scroll_value.y, total.y,
+                                       core->proportional_scroll_speed);
+        break;
+      }
+    case PLUTO_SCROLL_STYLE_CONSTANT:
+      {
+        core->scroll_value.x = lerp_constant_f (core->scroll_value.x, total.x,
+                                                core->constant_scroll_speed);
+        core->scroll_value.y = lerp_constant_f (core->scroll_value.y, total.y,
+                                                core->constant_scroll_speed);
+        break;
+      }
+    case PLUTO_SCROLL_STYLE_BLEND:
+      {
+        core->scroll_value.x = lerp_blend_f (core->scroll_value.x, total.x,
+                                             core->proportional_scroll_speed,
+                                             core->constant_scroll_speed);
+        core->scroll_value.y = lerp_blend_f (core->scroll_value.y, total.y,
+                                             core->proportional_scroll_speed,
+                                             core->constant_scroll_speed);
+        break;
+      }
+    }
 }
 
 static void
@@ -2085,14 +2122,22 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
   Sint32 linked_v = SDL_GetVersion ();
   log_debug (
       DEBUG_LOG_NONE,
-      "Binary compiled with SDL %d.%d.%d. Binary linked against SDL %d.%d.%d.",
+      "Binary compiled with SDL %d.%d.%d. Binary linked against SDL "
+      "%d.%d.%d.",
       SDL_VERSIONNUM_MAJOR (compiled_v), SDL_VERSIONNUM_MINOR (compiled_v),
       SDL_VERSIONNUM_MICRO (compiled_v), SDL_VERSIONNUM_MAJOR (linked_v),
       SDL_VERSIONNUM_MINOR (linked_v), SDL_VERSIONNUM_MICRO (linked_v));
 
+  /* Configure layout scrolling default behavior. */
   core->scroll_value = (SDL_FPoint){ 0.f, 0.f };
-  core->b_ignore_scroll_x = false;
-  core->b_ignore_scroll_y = false;
+  core->proportional_scroll_speed = params->initial_proportional_scroll_speed;
+  core->constant_scroll_speed = params->initial_constant_scroll_speed;
+  core->scroll_style = params->initial_scroll_style;
+  core->b_ignore_scroll_x = params->b_should_initially_ignore_scroll_x;
+  core->b_ignore_scroll_y = params->b_should_initially_ignore_scroll_y;
+  core->b_clamp_scroll_x = params->b_should_initially_clamp_scroll_x;
+  core->b_clamp_scroll_y = params->b_should_initially_clamp_scroll_y;
+
   core->scale = params->default_user_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
   core->logical_size = params->default_win_size;
