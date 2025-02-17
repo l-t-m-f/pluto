@@ -1634,7 +1634,15 @@ system_resize_apply_delta (ecs_iter_t *it)
 static void
 system_scroll_to_calculate_avg (ecs_iter_t *it)
 {
-  log_debug (DEBUG_LOG_SPAM, "Entered <Update> scroll to system!");
+  log_debug (DEBUG_LOG_SPAM, "Entered <Calculate Avg> scroll to system!");
+
+  static Uint32 delay_ms;
+  if (delay_ms < 100u)
+    {
+      delay_ms++;
+      return;
+    }
+  delay_ms = 0u;
 
   scroll_to_c *scroll_to = ecs_field (it, scroll_to_c, 0);
   origin_c *origin = ecs_field (it, origin_c, 1);
@@ -1894,6 +1902,17 @@ init_pluto_systems (ecs_world_t *ecs)
   }
   {
     ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_scroll_to_calculate_avg",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (scroll_to_c) },
+                                          { .id = ecs_id (origin_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_scroll_to_calculate_avg });
+  }
+  {
+    ecs_entity_t ent
         = ecs_entity (ecs, { .name = "system_anim_player_advance",
                              .add = ecs_ids (ecs_dependson (EcsOnUpdate)) });
     ecs_query_desc_t query = { .terms = { { .id = ecs_id (anim_player_c) } } };
@@ -1993,16 +2012,6 @@ init_pluto_systems (ecs_world_t *ecs)
             .order_by_callback = order_by_layer };
     ecs_system (ecs,
                 { .entity = ent, .query = query, .callback = system_draw });
-  }
-
-  {
-    ecs_entity_t ent
-        = ecs_entity (ecs, { .name = "system_scroll_to_calculate_avg" });
-    ecs_query_desc_t query = { .terms = { { .id = ecs_id (scroll_to_c) },
-                                          { .id = ecs_id (origin_c) } } };
-    ecs_system (ecs, { .entity = ent,
-                       .query = query,
-                       .callback = system_scroll_to_calculate_avg });
   }
 }
 
@@ -2236,9 +2245,6 @@ init_pluto (ecs_world_t *world, struct pluto_core_params *params)
   init_pluto_phases (world);
   init_pluto_tasks (world);
   init_pluto_systems (world);
-
-  SDL_AddTimer (core->scroll_poll_frequency_ms,
-                run_system_scroll_to_calculate_avg, world);
 
   return core;
 }
