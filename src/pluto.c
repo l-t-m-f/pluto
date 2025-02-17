@@ -1632,7 +1632,7 @@ system_resize_apply_delta (ecs_iter_t *it)
 }
 
 static void
-system_scroll_to_update (ecs_iter_t *it)
+system_scroll_to_calculate_avg (ecs_iter_t *it)
 {
   log_debug (DEBUG_LOG_SPAM, "Entered <Update> scroll to system!");
 
@@ -1665,32 +1665,44 @@ system_scroll_to_update (ecs_iter_t *it)
       total.y = SDL_clamp (total.y, 0, core->logical_size.y);
     }
 
+  core->scroll_dest = total;
+}
+
+static void
+task_scroll_to_update (ecs_iter_t *it)
+{
+  core_s *core = ecs_field (it, core_s, 0);
+
   switch (core->scroll_style)
     {
     case PLUTO_SCROLL_STYLE_PROPORTIONAL:
       {
-        core->scroll_value.x = lerp_f (core->scroll_value.x, total.x,
-                                       core->proportional_scroll_speed);
-        core->scroll_value.y = lerp_f (core->scroll_value.y, total.y,
-                                       core->proportional_scroll_speed);
+        core->scroll_value.x
+            = lerp_f (core->scroll_value.x, core->scroll_dest.x,
+                      core->proportional_scroll_speed);
+        core->scroll_value.y
+            = lerp_f (core->scroll_value.y, core->scroll_dest.y,
+                      core->proportional_scroll_speed);
         break;
       }
     case PLUTO_SCROLL_STYLE_CONSTANT:
       {
-        core->scroll_value.x = lerp_constant_f (core->scroll_value.x, total.x,
-                                                core->constant_scroll_speed);
-        core->scroll_value.y = lerp_constant_f (core->scroll_value.y, total.y,
-                                                core->constant_scroll_speed);
+        core->scroll_value.x
+            = lerp_constant_f (core->scroll_value.x, core->scroll_dest.x,
+                               core->constant_scroll_speed);
+        core->scroll_value.y
+            = lerp_constant_f (core->scroll_value.y, core->scroll_dest.y,
+                               core->constant_scroll_speed);
         break;
       }
     case PLUTO_SCROLL_STYLE_BLEND:
       {
-        core->scroll_value.x = lerp_blend_f (core->scroll_value.x, total.x,
-                                             core->proportional_scroll_speed,
-                                             core->constant_scroll_speed);
-        core->scroll_value.y = lerp_blend_f (core->scroll_value.y, total.y,
-                                             core->proportional_scroll_speed,
-                                             core->constant_scroll_speed);
+        core->scroll_value.x = lerp_blend_f (
+            core->scroll_value.x, core->scroll_dest.x,
+            core->proportional_scroll_speed, core->constant_scroll_speed);
+        core->scroll_value.y = lerp_blend_f (
+            core->scroll_value.y, core->scroll_dest.y,
+            core->proportional_scroll_speed, core->constant_scroll_speed);
         break;
       }
     }
@@ -1772,6 +1784,18 @@ init_pluto_tasks (ecs_world_t *ecs)
     ecs_system (
         ecs,
         { .entity = ent, .query = query, .callback = task_get_window_size });
+  }
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "task_scroll_to_update",
+                             .add = ecs_ids (ecs_dependson (
+                                 ecs_lookup (ecs, "pre_render_phase"))) });
+    ecs_query_desc_t query
+        = { .terms
+            = { { .id = ecs_id (core_s), .src.id = ecs_id (core_s) } } };
+    ecs_system (
+        ecs,
+        { .entity = ent, .query = query, .callback = task_scroll_to_update });
   }
 }
 
@@ -1867,17 +1891,6 @@ init_pluto_systems (ecs_world_t *ecs)
     ecs_system (
         ecs,
         { .entity = ent, .query = query, .callback = system_visibility_bind });
-  }
-  {
-    ecs_entity_t ent
-        = ecs_entity (ecs, { .name = "system_scroll_to_update",
-                             .add = ecs_ids (ecs_dependson (
-                                 ecs_lookup (ecs, "pre_render_phase"))) });
-    ecs_query_desc_t query = { .terms = { { .id = ecs_id (scroll_to_c) },
-                                          { .id = ecs_id (origin_c) } } };
-    ecs_system (ecs, { .entity = ent,
-                       .query = query,
-                       .callback = system_scroll_to_update });
   }
   {
     ecs_entity_t ent
@@ -1980,6 +1993,16 @@ init_pluto_systems (ecs_world_t *ecs)
             .order_by_callback = order_by_layer };
     ecs_system (ecs,
                 { .entity = ent, .query = query, .callback = system_draw });
+  }
+
+  {
+    ecs_entity_t ent
+        = ecs_entity (ecs, { .name = "system_scroll_to_calculate_avg" });
+    ecs_query_desc_t query = { .terms = { { .id = ecs_id (scroll_to_c) },
+                                          { .id = ecs_id (origin_c) } } };
+    ecs_system (ecs, { .entity = ent,
+                       .query = query,
+                       .callback = system_scroll_to_calculate_avg });
   }
 }
 
@@ -2137,6 +2160,7 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
   core->b_ignore_scroll_y = params->b_should_initially_ignore_scroll_y;
   core->b_clamp_scroll_x = params->b_should_initially_clamp_scroll_x;
   core->b_clamp_scroll_y = params->b_should_initially_clamp_scroll_y;
+  core->scroll_poll_frequency_ms = params->initial_scroll_poll_frequency_ms;
 
   core->scale = params->default_user_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
@@ -2165,41 +2189,56 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
   return core;
 }
 
-core_s *
-init_pluto (ecs_world_t *ecs, struct pluto_core_params *params)
+Uint32
+run_system_scroll_to_calculate_avg (void *userdata, SDL_TimerID timerID,
+                                    Uint32 interval)
 {
-  ECS_COMPONENT_DEFINE (ecs, core_s);
+  ecs_world_t *world = userdata;
+  const core_s *core = ecs_singleton_get (world, core_s);
+  ecs_run (world, ecs_lookup (world, "system_scroll_to_calculate_avg"), 0.f,
+           NULL);
+  return core->scroll_poll_frequency_ms;
+}
 
-  ECS_COMPONENT_DEFINE (ecs, array_c);
-  ECS_COMPONENT_DEFINE (ecs, alpha_c);
-  ECS_COMPONENT_DEFINE (ecs, anim_player_c);
-  ECS_COMPONENT_DEFINE (ecs, bounds_c);
-  ECS_COMPONENT_DEFINE (ecs, box_c);
-  ECS_COMPONENT_DEFINE (ecs, cache_c);
-  ECS_COMPONENT_DEFINE (ecs, click_c);
-  ECS_COMPONENT_DEFINE (ecs, color_c);
-  ECS_COMPONENT_DEFINE (ecs, drag_c);
-  ECS_COMPONENT_DEFINE (ecs, hover_c);
-  ECS_COMPONENT_DEFINE (ecs, layer_c);
-  ECS_COMPONENT_DEFINE (ecs, index_c);
-  ECS_COMPONENT_DEFINE (ecs, mat2d_c);
-  ECS_COMPONENT_DEFINE (ecs, mat3d_c);
-  ECS_COMPONENT_DEFINE (ecs, margins_c);
-  ECS_COMPONENT_DEFINE (ecs, movement_c);
-  ECS_COMPONENT_DEFINE (ecs, ngrid_c);
-  ECS_COMPONENT_DEFINE (ecs, origin_c);
-  ECS_COMPONENT_DEFINE (ecs, pattern_c);
-  ECS_COMPONENT_DEFINE (ecs, render_target_c);
-  ECS_COMPONENT_DEFINE (ecs, resize_c);
-  ECS_COMPONENT_DEFINE (ecs, scroll_to_c);
-  ECS_COMPONENT_DEFINE (ecs, sprite_c);
-  ECS_COMPONENT_DEFINE (ecs, text_c);
-  ECS_COMPONENT_DEFINE (ecs, visibility_c);
+core_s *
+init_pluto (ecs_world_t *world, struct pluto_core_params *params)
+{
+  ECS_COMPONENT_DEFINE (world, core_s);
 
-  core_s *core = init_pluto_core (ecs, params);
-  init_pluto_hooks (ecs);
-  init_pluto_phases (ecs);
-  init_pluto_tasks (ecs);
-  init_pluto_systems (ecs);
+  ECS_COMPONENT_DEFINE (world, array_c);
+  ECS_COMPONENT_DEFINE (world, alpha_c);
+  ECS_COMPONENT_DEFINE (world, anim_player_c);
+  ECS_COMPONENT_DEFINE (world, bounds_c);
+  ECS_COMPONENT_DEFINE (world, box_c);
+  ECS_COMPONENT_DEFINE (world, cache_c);
+  ECS_COMPONENT_DEFINE (world, click_c);
+  ECS_COMPONENT_DEFINE (world, color_c);
+  ECS_COMPONENT_DEFINE (world, drag_c);
+  ECS_COMPONENT_DEFINE (world, hover_c);
+  ECS_COMPONENT_DEFINE (world, layer_c);
+  ECS_COMPONENT_DEFINE (world, index_c);
+  ECS_COMPONENT_DEFINE (world, mat2d_c);
+  ECS_COMPONENT_DEFINE (world, mat3d_c);
+  ECS_COMPONENT_DEFINE (world, margins_c);
+  ECS_COMPONENT_DEFINE (world, movement_c);
+  ECS_COMPONENT_DEFINE (world, ngrid_c);
+  ECS_COMPONENT_DEFINE (world, origin_c);
+  ECS_COMPONENT_DEFINE (world, pattern_c);
+  ECS_COMPONENT_DEFINE (world, render_target_c);
+  ECS_COMPONENT_DEFINE (world, resize_c);
+  ECS_COMPONENT_DEFINE (world, scroll_to_c);
+  ECS_COMPONENT_DEFINE (world, sprite_c);
+  ECS_COMPONENT_DEFINE (world, text_c);
+  ECS_COMPONENT_DEFINE (world, visibility_c);
+
+  core_s *core = init_pluto_core (world, params);
+  init_pluto_hooks (world);
+  init_pluto_phases (world);
+  init_pluto_tasks (world);
+  init_pluto_systems (world);
+
+  SDL_AddTimer (core->scroll_poll_frequency_ms,
+                run_system_scroll_to_calculate_avg, world);
+
   return core;
 }

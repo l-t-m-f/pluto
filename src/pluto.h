@@ -87,6 +87,7 @@ struct pluto_core_params
   bool b_should_initially_ignore_scroll_y;
   bool b_should_initially_clamp_scroll_x;
   bool b_should_initially_clamp_scroll_y;
+  Uint32 initial_scroll_poll_frequency_ms;
 };
 
 /******************************/
@@ -108,6 +109,7 @@ typedef struct singleton_core
   struct rts_manager *rts;
   float scale;
   SDL_FPoint scroll_value;
+  SDL_FPoint scroll_dest;
   bool b_ignore_scroll_x;
   bool b_ignore_scroll_y;
   Sint32 scroll_style;
@@ -115,6 +117,7 @@ typedef struct singleton_core
   float constant_scroll_speed;
   bool b_clamp_scroll_x;
   bool b_clamp_scroll_y;
+  Uint32 scroll_poll_frequency_ms;
 } core_s;
 
 typedef struct component_alpha
@@ -324,7 +327,7 @@ typedef struct component_visibility
 /* Call this at the start of your application. It deals with SDL and other
  * required constructs and returns a pointer to an ecs singleton containing
  * the core framework functionality. */
-core_s *init_pluto (ecs_world_t *ecs, struct pluto_core_params *params);
+core_s *init_pluto (ecs_world_t *world, struct pluto_core_params *params);
 
 /* Implement these callbacks in your application. Only mouse and keyboard are
  * supported for now.*/
