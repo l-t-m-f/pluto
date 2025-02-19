@@ -1658,21 +1658,43 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
   total.x /= (float)it->count;
   total.y /= (float)it->count;
 
-  SDL_FPoint offset = { (float)core->logical_size.x / 2.0f,
-                        (float)core->logical_size.y / 2.0f };
+  const bool b_use_logical
+      = SDL_strcmp (SDL_GetHint ("SDL_WINDOWS_DPI_AWARENESS"), "1") != 0;
 
-  total.x -= offset.x;
-  total.y -= offset.y;
-
-  if (core->b_clamp_scroll_x == true)
+  if(b_use_logical == true)
     {
-      total.x = SDL_clamp (total.x, 0, core->logical_size.x);
-    }
-  if (core->b_clamp_scroll_y == true)
-    {
-      total.y = SDL_clamp (total.y, 0, core->logical_size.y);
-    }
+      SDL_FPoint offset = { (float)core->logical_size.x / 2.0f,
+                            (float)core->logical_size.y / 2.0f };
 
+      total.x -= offset.x;
+      total.y -= offset.y;
+
+      if (core->b_clamp_scroll_x == true)
+        {
+          total.x = SDL_clamp (total.x, 0, core->logical_size.x);
+        }
+      if (core->b_clamp_scroll_y == true)
+        {
+          total.y = SDL_clamp (total.y, 0, core->logical_size.y);
+        }
+    }
+  else {
+      SDL_FPoint offset = { (float)core->window_size.x / 2.0f,
+                            (float)core->window_size.y / 2.0f };
+
+      total.x -= offset.x;
+      total.y -= offset.y;
+
+      if (core->b_clamp_scroll_x == true)
+        {
+          total.x = SDL_clamp (total.x, 0, SDL_max(0, 1920.f - core->window_size.x));
+        }
+      if (core->b_clamp_scroll_y == true)
+        {
+          total.y = SDL_clamp (total.y, 0, SDL_max(0, 1200.f - core->window_size.y));
+        }
+
+    }
   core->scroll_dest = total;
 }
 
