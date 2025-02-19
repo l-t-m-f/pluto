@@ -1672,15 +1672,19 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
       total.y *= core->scale;
       if (core->b_clamp_scroll_x == true)
         {
-          total.x = SDL_clamp (
-              total.x, 0,
-              SDL_max (0, (core->layout_size.x * core->scale) - core->logical_size.x));
+          total.x = SDL_clamp (total.x, -core->scroll_padding.left,
+                               SDL_max (-core->scroll_padding.right,
+                                        (core->layout_size.x * core->scale)
+                                            - core->logical_size.x
+                                            + core->scroll_padding.right));
         }
       if (core->b_clamp_scroll_y == true)
         {
-          total.y = SDL_clamp (
-              total.y, 0,
-              SDL_max (0, (core->layout_size.y * core->scale) - core->logical_size.y));
+          total.y = SDL_clamp (total.y, -core->scroll_padding.top,
+                               SDL_max (-core->scroll_padding.bottom,
+                                        (core->layout_size.y * core->scale)
+                                            - core->logical_size.y)
+                                   + core->scroll_padding.bottom);
         }
     }
   else
@@ -1695,15 +1699,19 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
       total.y *= core->scale;
       if (core->b_clamp_scroll_x == true)
         {
-          total.x = SDL_clamp (
-              total.x, 0,
-              SDL_max (0, (core->layout_size.x * core->scale) - core->window_size.x));
+          total.x = SDL_clamp (total.x, -core->scroll_padding.left,
+                               SDL_max (-core->scroll_padding.right,
+                                        (core->layout_size.x * core->scale)
+                                            - core->window_size.x
+                                            + core->scroll_padding.right));
         }
       if (core->b_clamp_scroll_y == true)
         {
-          total.y = SDL_clamp (
-              total.y, 0,
-              SDL_max (0, (core->layout_size.y * core->scale) - core->window_size.y));
+          total.y = SDL_clamp (total.y, -core->scroll_padding.top,
+                               SDL_max (-core->scroll_padding.bottom,
+                                        (core->layout_size.y * core->scale)
+                                            - core->window_size.y)
+                                   + core->scroll_padding.bottom);
         }
     }
   core->scroll_dest = total;
@@ -2203,6 +2211,7 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
   core->b_clamp_scroll_x = params->b_should_initially_clamp_scroll_x;
   core->b_clamp_scroll_y = params->b_should_initially_clamp_scroll_y;
   core->scroll_poll_frequency_ms = params->initial_scroll_poll_frequency_ms;
+  core->scroll_padding = params->initial_scroll_padding;
 
   core->scale = params->default_user_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));

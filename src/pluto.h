@@ -90,6 +90,7 @@ struct pluto_core_params
   bool b_should_initially_clamp_scroll_x;
   bool b_should_initially_clamp_scroll_y;
   Uint32 initial_scroll_poll_frequency_ms;
+  struct margins_ngrid initial_scroll_padding;
 };
 
 /******************************/
@@ -121,6 +122,7 @@ typedef struct singleton_core
   bool b_clamp_scroll_x;
   bool b_clamp_scroll_y;
   Uint32 scroll_poll_frequency_ms;
+  struct margins_ngrid scroll_padding;
 } core_s;
 
 typedef struct component_alpha
