@@ -69,7 +69,8 @@ struct pluto_input_data
 struct pluto_core_params
 {
   const char *window_name;
-  SDL_Point default_win_size;
+  SDL_Point initial_window_size;
+  SDL_Point initial_layout_size;
   SDL_InitFlags init_flags;
   SDL_WindowFlags window_flags;
   float default_user_scaling;
@@ -78,6 +79,7 @@ struct pluto_core_params
   bool b_is_DPI_aware;
   bool b_has_logical_size;
   SDL_RendererLogicalPresentation logical_presentation_mode;
+  SDL_Point initial_logical_size;
   SDL_BlendMode renderer_blend_mode;
   struct pluto_input_data input_data;
   Sint32 initial_scroll_style;
@@ -99,6 +101,7 @@ typedef struct singleton_core
   SDL_Window *win;
   SDL_Point window_size;
   SDL_Point logical_size;
+  SDL_Point layout_size;
   bool b_is_fullscreen_presentation;
   SDL_Renderer *rend;
   struct screen *screen;

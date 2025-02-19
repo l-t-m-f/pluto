@@ -1658,10 +1658,9 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
   total.x /= (float)it->count;
   total.y /= (float)it->count;
 
-  const bool b_use_logical
-      = SDL_GetHint ("SDL_WINDOWS_DPI_AWARENESS") == NULL;
+  const bool b_use_logical = SDL_GetHint ("SDL_WINDOWS_DPI_AWARENESS") == NULL;
 
-  if(b_use_logical == true)
+  if (b_use_logical == true)
     {
       SDL_FPoint offset = { (float)core->logical_size.x / 2.0f,
                             (float)core->logical_size.y / 2.0f };
@@ -1678,22 +1677,28 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
           total.y = SDL_clamp (total.y, 0, core->logical_size.y);
         }
     }
-  else {
+  else
+    {
       SDL_FPoint offset = { (float)core->window_size.x / 2.0f,
                             (float)core->window_size.y / 2.0f };
 
-      total.x -= offset.x;
-      total.y -= offset.y;
+      total.x -= (offset.x / core->scale);
+      total.y -= (offset.y / core->scale);
 
+      total.x *= core->scale;
+      total.y *= core->scale;
       if (core->b_clamp_scroll_x == true)
         {
-          total.x = SDL_clamp (total.x, 0, SDL_max(0, 1920.f - core->window_size.x));
+          total.x = SDL_clamp (
+              total.x, 0,
+              SDL_max (0, (core->layout_size.x * core->scale) - core->window_size.x));
         }
       if (core->b_clamp_scroll_y == true)
         {
-          total.y = SDL_clamp (total.y, 0, SDL_max(0, 1200.f - core->window_size.y));
+          total.y = SDL_clamp (
+              total.y, 0,
+              SDL_max (0, (core->layout_size.y * core->scale) - core->window_size.y));
         }
-
     }
   core->scroll_dest = total;
 }
@@ -2151,14 +2156,14 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
   SDL_Init (params->init_flags);
   TTF_Init ();
   core->win
-      = SDL_CreateWindow (params->window_name, params->default_win_size.x,
-                          params->default_win_size.y, params->window_flags);
+      = SDL_CreateWindow (params->window_name, params->initial_window_size.x,
+                          params->initial_window_size.y, params->window_flags);
   core->rend = SDL_CreateRenderer (core->win, NULL);
   if (params->b_has_logical_size == true)
     {
-      SDL_SetRenderLogicalPresentation (core->rend, params->default_win_size.x,
-                                        params->default_win_size.y,
-                                        params->logical_presentation_mode);
+      SDL_SetRenderLogicalPresentation (
+          core->rend, params->initial_window_size.x,
+          params->initial_window_size.y, params->logical_presentation_mode);
     }
   SDL_SetRenderVSync (core->rend, true);
   SDL_SetHint (SDL_HINT_GPU_DRIVER, params->gpu_driver_hint);
@@ -2195,7 +2200,10 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
 
   core->scale = params->default_user_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
-  core->logical_size = params->default_win_size;
+
+  core->window_size = params->initial_window_size;
+  core->logical_size = params->initial_logical_size;
+  core->layout_size = params->initial_layout_size;
 
   /* Init the input manager. */
   struct input_man_callbacks callbacks
