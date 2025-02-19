@@ -1659,7 +1659,7 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
   total.y /= (float)it->count;
 
   const bool b_use_logical
-      = SDL_strcmp (SDL_GetHint ("SDL_WINDOWS_DPI_AWARENESS"), "1") != 0;
+      = SDL_GetHint ("SDL_WINDOWS_DPI_AWARENESS") == NULL;
 
   if(b_use_logical == true)
     {
