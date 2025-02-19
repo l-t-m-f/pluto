@@ -1665,16 +1665,22 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
       SDL_FPoint offset = { (float)core->logical_size.x / 2.0f,
                             (float)core->logical_size.y / 2.0f };
 
-      total.x -= offset.x;
-      total.y -= offset.y;
+      total.x -= (offset.x / core->scale);
+      total.y -= (offset.y / core->scale);
 
+      total.x *= core->scale;
+      total.y *= core->scale;
       if (core->b_clamp_scroll_x == true)
         {
-          total.x = SDL_clamp (total.x, 0, core->logical_size.x);
+          total.x = SDL_clamp (
+              total.x, 0,
+              SDL_max (0, (core->layout_size.x * core->scale) - core->logical_size.x));
         }
       if (core->b_clamp_scroll_y == true)
         {
-          total.y = SDL_clamp (total.y, 0, core->logical_size.y);
+          total.y = SDL_clamp (
+              total.y, 0,
+              SDL_max (0, (core->layout_size.y * core->scale) - core->logical_size.y));
         }
     }
   else
