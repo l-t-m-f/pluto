@@ -1637,17 +1637,20 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
   log_debug (DEBUG_LOG_SPAM, "Entered <Calculate Avg> scroll to system!");
 
   static Uint32 delay_ms;
-  if (delay_ms < 100u)
+
+  core_s *core = ecs_get_mut (it->world, ecs_id (core_s), core_s);
+  if (core->b_should_scroll_instant == false)
     {
-      delay_ms++;
-      return;
+      if (delay_ms < core->scroll_poll_frequency_ms)
+        {
+          delay_ms++;
+          return;
+        }
+      delay_ms = 0u;
     }
-  delay_ms = 0u;
 
   scroll_to_c *scroll_to = ecs_field (it, scroll_to_c, 0);
   origin_c *origin = ecs_field (it, origin_c, 1);
-
-  core_s *core = ecs_get_mut (it->world, ecs_id (core_s), core_s);
 
   SDL_FPoint total = { .x = 0.f, .y = 0.f };
   for (Sint32 i = 0; i < it->count; i++)
@@ -1715,6 +1718,12 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
         }
     }
   core->scroll_dest = total;
+
+  if (core->b_should_scroll_instant == true)
+    {
+      core->scroll_value = core->scroll_dest;
+      core->b_should_scroll_instant = false;
+    }
 }
 
 static void
@@ -2212,6 +2221,7 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
   core->b_clamp_scroll_y = params->b_should_initially_clamp_scroll_y;
   core->scroll_poll_frequency_ms = params->initial_scroll_poll_frequency_ms;
   core->scroll_padding = params->initial_scroll_padding;
+  core->b_should_scroll_instant = false;
 
   core->scale = params->default_user_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));

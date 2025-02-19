@@ -121,6 +121,7 @@ typedef struct singleton_core
   float constant_scroll_speed;
   bool b_clamp_scroll_x;
   bool b_clamp_scroll_y;
+  bool b_should_scroll_instant;
   Uint32 scroll_poll_frequency_ms;
   struct margins_ngrid scroll_padding;
 } core_s;
