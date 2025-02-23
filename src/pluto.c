@@ -1721,16 +1721,6 @@ system_scroll_to_calculate_avg (ecs_iter_t *it)
         }
     }
 
-  if (core->b_snap_scroll == true)
-    {
-      total.x = (SDL_roundf (total.x / core->snap_scroll_grid)
-                 * core->snap_scroll_grid)
-                - core->scroll_padding.left + core->snap_scroll_grid;
-      total.y = (SDL_roundf (total.y / core->snap_scroll_grid)
-                 * core->snap_scroll_grid)
-                - core->scroll_padding.top + core->snap_scroll_grid;
-    }
-
   core->scroll_dest = total;
 
   if (core->b_should_scroll_instant == true)
@@ -2236,8 +2226,6 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
   core->scroll_poll_frequency_ms = params->initial_scroll_poll_frequency_ms;
   core->scroll_padding = params->initial_scroll_padding;
   core->b_should_scroll_instant = false;
-  core->b_snap_scroll = params->b_snap_scroll;
-  core->snap_scroll_grid = params->initial_snap_scroll_grid;
 
   core->scale = params->default_user_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
