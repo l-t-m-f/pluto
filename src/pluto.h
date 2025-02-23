@@ -312,6 +312,7 @@ typedef struct component_sprite
 typedef struct component_text
 {
   string_t content;
+  string_t face;
   void (*content_binding) (ecs_entity_t, ecs_world_t *, string_t);
   Sint32 align_h;
   Sint32 align_v;

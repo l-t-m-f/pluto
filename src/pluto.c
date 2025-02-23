@@ -1288,12 +1288,13 @@ system_draw (ecs_iter_t *it)
                                         .tint_g = text_g,
                                         .tint_b = text_b,
                                         .alpha = alpha,
-                                        .face = "baby_jeepers",
                                         .location = dest,
                                         .align_h = text_opt[i].align_h,
                                         .align_v = text_opt[i].align_v };
+          string_init_set (params.face, text_opt[i].face);
           text_man_render_string (core->text_man, &params,
                                   text_opt[i].content);
+          string_clear (params.face);
         }
     end:
       if (cache_opt != NULL && &cache_opt[i] != NULL)
