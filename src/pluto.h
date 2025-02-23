@@ -83,6 +83,8 @@ struct pluto_core_params
   SDL_BlendMode renderer_blend_mode;
   struct pluto_input_data input_data;
   Sint32 initial_scroll_style;
+  bool b_snap_scroll;
+  Sint32 initial_snap_scroll_grid;
   float initial_proportional_scroll_speed;
   float initial_constant_scroll_speed;
   bool b_should_initially_ignore_scroll_x;
@@ -117,6 +119,8 @@ typedef struct singleton_core
   bool b_ignore_scroll_x;
   bool b_ignore_scroll_y;
   Sint32 scroll_style;
+  bool b_snap_scroll;
+  Sint32 snap_scroll_grid;
   float proportional_scroll_speed;
   float constant_scroll_speed;
   bool b_clamp_scroll_x;
