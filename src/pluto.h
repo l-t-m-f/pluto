@@ -352,6 +352,6 @@ extern void handle_mouse_hold (struct input_man *input_man, SDL_FPoint pos,
 extern void handle_mouse_motion (struct input_man *input_man, SDL_FPoint pos,
                                  SDL_FPoint rel, void *param);
 
-SDL_FPoint get_mouse_position (ecs_entity_t ent, ecs_world_t *ecs);
+SDL_FPoint get_mouse_position (ecs_entity_t ent, ecs_world_t *world);
 
 #endif /* PLUTO_MODULE_H */

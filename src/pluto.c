@@ -370,9 +370,9 @@ visibility (void *ptr, Sint32 count, const ecs_type_info_t *type_info)
 /******************************/
 
 SDL_FPoint
-get_mouse_position (ecs_entity_t ent, ecs_world_t *ecs)
+get_mouse_position (ecs_entity_t ent, ecs_world_t *world)
 {
-  const core_s *core = ecs_singleton_get (ecs, core_s);
+  const core_s *core = ecs_singleton_get (world, core_s);
   return core->input_man->mouse.position.window;
 }
 
