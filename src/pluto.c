@@ -1015,9 +1015,11 @@ system_draw (ecs_iter_t *it)
           if (box_opt[i].b_is_filled == true)
             {
               SDL_RenderFillRect (core->rend, &dest);
-              goto end;
             }
-          SDL_RenderRect (core->rend, &dest);
+          else
+            {
+              SDL_RenderRect (core->rend, &dest);
+            }
         }
       if (margins_opt != NULL && &margins_opt[i] != NULL)
         {
