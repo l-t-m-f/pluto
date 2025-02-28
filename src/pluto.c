@@ -1739,6 +1739,10 @@ task_scroll_to_update (ecs_iter_t *it)
 
   switch (core->scroll_style)
     {
+    case PLUTO_SCROLL_STYLE_NONE:
+      {
+        break;
+      }
     case PLUTO_SCROLL_STYLE_PROPORTIONAL:
       {
         core->scroll_value.x
