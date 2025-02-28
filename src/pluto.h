@@ -68,29 +68,28 @@ struct pluto_input_data
 
 struct pluto_core_params
 {
+  SDL_Point window_size;
   const char *window_name;
-  SDL_Point initial_window_size;
-  SDL_Point initial_layout_size;
   SDL_InitFlags init_flags;
   SDL_WindowFlags window_flags;
-  float default_user_scaling;
-  const char *gpu_driver_hint;
-  bool b_should_debug_GPU;
-  bool b_is_DPI_aware;
-  bool b_has_logical_size;
-  SDL_RendererLogicalPresentation logical_presentation_mode;
-  SDL_Point initial_logical_size;
-  SDL_BlendMode renderer_blend_mode;
-  struct pluto_input_data input_data;
-  Sint32 initial_scroll_style;
-  float initial_proportional_scroll_speed;
-  float initial_constant_scroll_speed;
-  bool b_should_initially_ignore_scroll_x;
-  bool b_should_initially_ignore_scroll_y;
-  bool b_should_initially_clamp_scroll_x;
-  bool b_should_initially_clamp_scroll_y;
-  Uint32 initial_scroll_poll_frequency_ms;
-  struct margins_ngrid initial_scroll_padding;
+  SDL_Point layout_size;
+  float user_scaling;
+  const char *gpu_pipeline;
+  bool b_gpu_debug;
+  bool b_auto_dpi_scale;
+  bool b_logical_present;
+  SDL_RendererLogicalPresentation logical_mode;
+  SDL_Point logical_size;
+  SDL_BlendMode blend_mode;
+  Sint32 scroll_to_style;
+  float proportional_scroll_speed;
+  float constant_scroll_speed;
+  bool b_ignore_scroll_x;
+  bool b_ignore_scroll_y;
+  bool b_clamp_scroll_x;
+  bool b_clamp_scroll_y;
+  Uint32 scroll_poll_frequency_ms;
+  struct margins_ngrid scroll_bounds;
 };
 
 /******************************/

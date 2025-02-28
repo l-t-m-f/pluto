@@ -2178,25 +2178,24 @@ static core_s *
 init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
 {
   core_s *core = ecs_singleton_ensure (ecs, core_s);
-  if (params->b_is_DPI_aware == true)
+  if (params->b_auto_dpi_scale == true)
     {
       SDL_SetHint ("SDL_WINDOWS_DPI_AWARENESS", "1");
     }
   SDL_Init (params->init_flags);
   TTF_Init ();
-  core->win
-      = SDL_CreateWindow (params->window_name, params->initial_window_size.x,
-                          params->initial_window_size.y, params->window_flags);
+  core->win = SDL_CreateWindow (params->window_name, params->window_size.x,
+                                params->window_size.y, params->window_flags);
   core->rend = SDL_CreateRenderer (core->win, NULL);
-  if (params->b_has_logical_size == true)
+  if (params->b_logical_present == true)
     {
-      SDL_SetRenderLogicalPresentation (
-          core->rend, params->initial_window_size.x,
-          params->initial_window_size.y, params->logical_presentation_mode);
+      SDL_SetRenderLogicalPresentation (core->rend, params->window_size.x,
+                                        params->window_size.y,
+                                        params->logical_mode);
     }
   SDL_SetRenderVSync (core->rend, true);
-  SDL_SetHint (SDL_HINT_GPU_DRIVER, params->gpu_driver_hint);
-  if (params->b_should_debug_GPU == false)
+  SDL_SetHint (SDL_HINT_GPU_DRIVER, params->gpu_pipeline);
+  if (params->b_gpu_debug == false)
     {
       SDL_SetHint (SDL_HINT_RENDER_GPU_DEBUG, "0");
     }
@@ -2204,7 +2203,7 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
     {
       SDL_SetHint (SDL_HINT_RENDER_GPU_DEBUG, "1");
     }
-  SDL_SetRenderDrawBlendMode (core->rend, params->renderer_blend_mode);
+  SDL_SetRenderDrawBlendMode (core->rend, params->blend_mode);
 
   Sint32 compiled_v = SDL_VERSION;
   Sint32 linked_v = SDL_GetVersion ();
@@ -2218,23 +2217,23 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
 
   /* Configure layout scrolling default behavior. */
   core->scroll_value = (SDL_FPoint){ 0.f, 0.f };
-  core->proportional_scroll_speed = params->initial_proportional_scroll_speed;
-  core->constant_scroll_speed = params->initial_constant_scroll_speed;
-  core->scroll_style = params->initial_scroll_style;
-  core->b_ignore_scroll_x = params->b_should_initially_ignore_scroll_x;
-  core->b_ignore_scroll_y = params->b_should_initially_ignore_scroll_y;
-  core->b_clamp_scroll_x = params->b_should_initially_clamp_scroll_x;
-  core->b_clamp_scroll_y = params->b_should_initially_clamp_scroll_y;
-  core->scroll_poll_frequency_ms = params->initial_scroll_poll_frequency_ms;
-  core->scroll_padding = params->initial_scroll_padding;
+  core->proportional_scroll_speed = params->proportional_scroll_speed;
+  core->constant_scroll_speed = params->constant_scroll_speed;
+  core->scroll_style = params->scroll_to_style;
+  core->b_ignore_scroll_x = params->b_ignore_scroll_x;
+  core->b_ignore_scroll_y = params->b_ignore_scroll_y;
+  core->b_clamp_scroll_x = params->b_clamp_scroll_x;
+  core->b_clamp_scroll_y = params->b_clamp_scroll_y;
+  core->scroll_poll_frequency_ms = params->scroll_poll_frequency_ms;
+  core->scroll_padding = params->scroll_bounds;
   core->b_should_scroll_instant = false;
 
-  core->scale = params->default_user_scaling;
+  core->scale = params->user_scaling;
   core->frame_data = SDL_calloc (1, sizeof (struct frame_data));
 
-  core->window_size = params->initial_window_size;
-  core->logical_size = params->initial_logical_size;
-  core->layout_size = params->initial_layout_size;
+  core->window_size = params->window_size;
+  core->logical_size = params->logical_size;
+  core->layout_size = params->layout_size;
 
   /* Init the input manager. */
   struct input_man_callbacks callbacks
@@ -2245,7 +2244,11 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
           .mouse_release_callback = handle_mouse_release,
           .mouse_hold_callback = handle_mouse_hold,
           .mouse_motion_callback = handle_mouse_motion };
-  input_man_init (&core->input_man, &callbacks, &params->input_data);
+
+  struct pluto_input_data *input_data
+      = SDL_calloc (1, sizeof (struct pluto_input_data));
+
+  input_man_init (&core->input_man, &callbacks, input_data);
 
   /* Init the render targets manager. */
   render_target_init (core->rend, &core->rts);
