@@ -2218,14 +2218,14 @@ init_pluto_core (ecs_world_t *ecs, struct pluto_core_params *params)
   /* Configure layout scrolling default behavior. */
   core->scroll_value = (SDL_FPoint){ 0.f, 0.f };
   core->proportional_scroll_speed = params->proportional_scroll_speed;
-  core->constant_scroll_speed = params->constant_scroll_speed;
+  core->constant_scroll_speed = params->constant_scroll_to_speed;
   core->scroll_style = params->scroll_to_style;
   core->b_ignore_scroll_x = params->b_ignore_scroll_x;
   core->b_ignore_scroll_y = params->b_ignore_scroll_y;
-  core->b_clamp_scroll_x = params->b_clamp_scroll_x;
-  core->b_clamp_scroll_y = params->b_clamp_scroll_y;
-  core->scroll_poll_frequency_ms = params->scroll_poll_frequency_ms;
-  core->scroll_padding = params->scroll_bounds;
+  core->b_clamp_scroll_x = params->b_clamp_scroll_to_x;
+  core->b_clamp_scroll_y = params->b_clamp_scroll_to_y;
+  core->scroll_poll_frequency_ms = params->scroll_to_poll_frequency_ms;
+  core->scroll_padding = params->scroll_to_bounds;
   core->b_should_scroll_instant = false;
 
   core->scale = params->user_scaling;

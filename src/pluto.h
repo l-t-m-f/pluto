@@ -83,13 +83,13 @@ struct pluto_core_params
   SDL_BlendMode blend_mode;
   Sint32 scroll_to_style;
   float proportional_scroll_speed;
-  float constant_scroll_speed;
+  float constant_scroll_to_speed;
   bool b_ignore_scroll_x;
   bool b_ignore_scroll_y;
-  bool b_clamp_scroll_x;
-  bool b_clamp_scroll_y;
-  Uint32 scroll_poll_frequency_ms;
-  struct margins_ngrid scroll_bounds;
+  bool b_clamp_scroll_to_x;
+  bool b_clamp_scroll_to_y;
+  Uint32 scroll_to_poll_frequency_ms;
+  struct margins_ngrid scroll_to_bounds;
 };
 
 /******************************/
