@@ -58,8 +58,12 @@ extern ECS_COMPONENT_DECLARE (visibility_c);
 
 #include "pluto_containers.h"
 
+/**
+ * A custom dataset which is passed to the input manager and holds some states.
+ */
 struct pluto_input_data
 {
+  bool b_is_hovering_widget;
   bool b_is_dragging_widget;
   bool b_is_resizing_widget;
   bool b_is_moving_camera;

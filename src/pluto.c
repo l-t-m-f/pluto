@@ -1306,6 +1306,13 @@ system_draw (ecs_iter_t *it)
     }
 }
 
+/**
+ * This system checks each hover component, using its origin and bounds to
+ * compute whether the mouse is over one of them. Components on higher layers
+ * consumer the hovering and prevent components on lower layers, which would be
+ * hovering otherwise, from entering the state.
+ * @param it
+ */
 static void
 system_hover_toggle (ecs_iter_t *it)
 {
@@ -1314,16 +1321,26 @@ system_hover_toggle (ecs_iter_t *it)
 
   origin_c *origin = ecs_field (it, origin_c, 1);
   bounds_c *bounds = ecs_field (it, bounds_c, 2);
+  layer_c *layer = ecs_field (it, layer_c, 3);
 
   const core_s *core = ecs_singleton_get (it->world, core_s);
+  struct pluto_input_data *input_data = core->input_man->custom_data;
+  SDL_FPoint mouse_window_pos = core->input_man->mouse.position.window;
+
+  /* Keeps note of which entity captures the hovering mechanism. */
+  static ecs_entity_t capture;
+  layer_c *capture_layer = NULL;
 
   for (Sint32 i = 0; i < it->count; i++)
     {
+      if (capture != 0u)
+        {
+          capture_layer = ecs_get_mut (it->world, capture, layer_c);
+        }
       SDL_FRect dest = (SDL_FRect){ .x = origin[i].world.x,
                                     .y = origin[i].world.y,
                                     .w = bounds[i].size.x,
                                     .h = bounds[i].size.y };
-      SDL_FPoint mouse_origin = core->input_man->mouse.position.window;
       if (origin[i].b_can_be_scaled == true)
         {
           dest.x *= core->scale;
@@ -1343,12 +1360,36 @@ system_hover_toggle (ecs_iter_t *it)
         .x = dest.x, .y = dest.y, .w = dest.x + dest.w, .h = dest.y + dest.h
       };
 
-      hover[i].b_state = false;
-
-      if ((mouse_origin.x >= collider.x && mouse_origin.x <= collider.w)
-          && (mouse_origin.y >= collider.y && mouse_origin.y <= collider.h))
+      /* If hovering the collider */
+      if ((mouse_window_pos.x >= collider.x
+           && mouse_window_pos.x <= collider.w)
+          && (mouse_window_pos.y >= collider.y
+              && mouse_window_pos.y <= collider.h))
         {
-          hover[i].b_state = true;
+          bool b_no_capture = capture == 0u;
+          if (b_no_capture == true
+              || capture_layer->value
+                     < layer->value /* Is capture overriden?*/)
+            {
+              /* Hover triggers. */
+              hover[i].b_state = true;
+              input_data->b_is_hovering_widget = true;
+              capture = it->entities[i];
+              continue;
+            }
+          bool b_overridden = capture != it->entities[i];
+          if (b_overridden == true)
+            {
+              hover[i].b_state = false;
+              continue;
+            }
+        }
+      bool b_was_captured = capture == it->entities[i];
+      if (b_was_captured == true)
+        {
+          hover[i].b_state = false;
+          input_data->b_is_hovering_widget = false;
+          capture = 0u;
         }
     }
 }
@@ -2015,7 +2056,8 @@ init_pluto_systems (ecs_world_t *ecs)
                                  ecs_lookup (ecs, "pre_render_phase"))) });
     ecs_query_desc_t query = { .terms = { { .id = ecs_id (hover_c) },
                                           { .id = ecs_id (origin_c) },
-                                          { .id = ecs_id (bounds_c) } } };
+                                          { .id = ecs_id (bounds_c) },
+                                          { .id = ecs_id (layer_c) } } };
     ecs_system (
         ecs,
         { .entity = ent, .query = query, .callback = system_hover_toggle });
