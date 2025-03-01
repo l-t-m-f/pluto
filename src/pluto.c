@@ -523,7 +523,7 @@ system_click_toggle (ecs_iter_t *it)
 {
   log_debug (DEBUG_LOG_SPAM, "Entered <Toggle> click system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
-  struct pluto_input_data *custom_data = core->input_man->custom_data;
+  struct pluto_input_data *input_data = core->input_man->custom_data;
 
   click_c *click = ecs_field (it, click_c, 0);
   hover_c *hover = ecs_field (it, hover_c, 1);
@@ -531,7 +531,7 @@ system_click_toggle (ecs_iter_t *it)
   for (Sint32 i = 0; i < it->count; i++)
     {
       click[i].b_state = false;
-      if (hover[i].b_state == false)
+      if (it->entities[i] != input_data->pointer_capture)
         {
           continue;
         }
@@ -1322,15 +1322,14 @@ system_hover_toggle (ecs_iter_t *it)
   struct pluto_input_data *input_data = core->input_man->custom_data;
   SDL_FPoint mouse_window_pos = core->input_man->mouse.position.window;
 
-  /* Keeps note of which entity captures the hovering mechanism. */
-  static ecs_entity_t capture;
   layer_c *capture_layer = NULL;
 
   for (Sint32 i = 0; i < it->count; i++)
     {
-      if (capture != 0u)
+      if (input_data->pointer_capture != 0u)
         {
-          capture_layer = ecs_get_mut (it->world, capture, layer_c);
+          capture_layer
+              = ecs_get_mut (it->world, input_data->pointer_capture, layer_c);
         }
       SDL_FRect dest = (SDL_FRect){ .x = origin[i].world.x,
                                     .y = origin[i].world.y,
@@ -1361,7 +1360,7 @@ system_hover_toggle (ecs_iter_t *it)
           && (mouse_window_pos.y >= collider.y
               && mouse_window_pos.y <= collider.h))
         {
-          bool b_no_capture = capture == 0u;
+          bool b_no_capture = input_data->pointer_capture == 0u;
           if (b_no_capture == true
               || capture_layer->value
                      < layer->value /* Is capture overriden?*/)
@@ -1369,25 +1368,26 @@ system_hover_toggle (ecs_iter_t *it)
               /* Hover triggers. */
               hover[i].b_state = true;
               input_data->b_is_hovering_widget = true;
-              capture = it->entities[i];
+              input_data->pointer_capture = it->entities[i];
               continue;
             }
-          bool b_overridden = capture != it->entities[i];
+          bool b_overridden = input_data->pointer_capture != it->entities[i];
           if (b_overridden == true)
             {
               hover[i].b_state = false;
               continue;
             }
-        } else
-      {
-          bool b_was_captured = capture == it->entities[i];
+        }
+      else
+        {
+          bool b_was_captured = input_data->pointer_capture == it->entities[i];
           if (b_was_captured == true)
-          {
+            {
               hover[i].b_state = false;
               input_data->b_is_hovering_widget = false;
-              capture = 0u;
-          }
-      }
+              input_data->pointer_capture = 0u;
+            }
+        }
     }
 }
 
