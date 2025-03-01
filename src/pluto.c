@@ -524,13 +524,8 @@ system_click_toggle (ecs_iter_t *it)
   log_debug (DEBUG_LOG_SPAM, "Entered <Toggle> click system!");
   const core_s *core = ecs_singleton_get (it->world, core_s);
   struct pluto_input_data *custom_data = core->input_man->custom_data;
-  if (custom_data->b_is_dragging_widget == true
-      || custom_data->b_is_resizing_widget == true)
-    {
-      return;
-    }
-  click_c *click = ecs_field (it, click_c, 0);
 
+  click_c *click = ecs_field (it, click_c, 0);
   hover_c *hover = ecs_field (it, hover_c, 1);
 
   for (Sint32 i = 0; i < it->count; i++)
@@ -1383,14 +1378,16 @@ system_hover_toggle (ecs_iter_t *it)
               hover[i].b_state = false;
               continue;
             }
-        }
-      bool b_was_captured = capture == it->entities[i];
-      if (b_was_captured == true)
-        {
-          hover[i].b_state = false;
-          input_data->b_is_hovering_widget = false;
-          capture = 0u;
-        }
+        } else
+      {
+          bool b_was_captured = capture == it->entities[i];
+          if (b_was_captured == true)
+          {
+              hover[i].b_state = false;
+              input_data->b_is_hovering_widget = false;
+              capture = 0u;
+          }
+      }
     }
 }
 
